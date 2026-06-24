@@ -1,0 +1,27 @@
+meta {
+  name: User posts
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{testUsername}}/posts?limit=5
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+  res.body.hasMore: isDefined
+  res.body.newestCursor: isDefined
+  res.body.oldestCursor: isDefined
+}
+
+tests {
+  test("all posts belong to the profile user", function () {
+    const d = res.body.data;
+    expect(d.length).to.be.above(0);
+    expect(d.every(p => p.author.username === bru.getEnvVar('testUsername'))).to.equal(true);
+  });
+}

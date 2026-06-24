@@ -1,0 +1,16 @@
+meta {
+  name: Tag not found
+  type: http
+  seq: 80
+}
+
+get {
+  url: {{baseUrl}}/api/tags/no-such-tag-xyz/posts
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+  res.body.error.code: eq NOT_FOUND
+}

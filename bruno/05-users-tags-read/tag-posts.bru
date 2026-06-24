@@ -1,0 +1,26 @@
+meta {
+  name: Tag posts
+  type: http
+  seq: 60
+}
+
+get {
+  url: {{baseUrl}}/api/tags/{{tagSlug}}/posts?limit=10
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+  res.body.hasMore: isDefined
+}
+
+tests {
+  test("every post carries the requested tag", function () {
+    const slug = bru.getEnvVar('tagSlug');
+    const d = res.body.data;
+    expect(d.length).to.be.above(0);
+    expect(d.every(p => p.tags.some(t => t.slug === slug))).to.equal(true);
+  });
+}

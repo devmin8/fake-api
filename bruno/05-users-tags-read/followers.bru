@@ -1,0 +1,27 @@
+meta {
+  name: Followers
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{testUsername}}/followers?limit=20
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+  res.body.hasMore: isDefined
+}
+
+tests {
+  test("follower cards present", function () {
+    const d = res.body.data;
+    if (d.length > 0) {
+      expect(d[0]).to.have.property('username');
+      expect(d[0]).to.have.property('createdAt');
+    }
+  });
+}

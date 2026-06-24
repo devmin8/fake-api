@@ -1,0 +1,16 @@
+meta {
+  name: User not found
+  type: http
+  seq: 70
+}
+
+get {
+  url: {{baseUrl}}/api/users/no_such_user_xyz
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+  res.body.error.code: eq NOT_FOUND
+}

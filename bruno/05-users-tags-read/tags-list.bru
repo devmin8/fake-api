@@ -1,0 +1,31 @@
+meta {
+  name: Tags list
+  type: http
+  seq: 50
+}
+
+get {
+  url: {{baseUrl}}/api/tags
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+  res.body.hasMore: eq false
+}
+
+script:post-response {
+  const withPosts = res.body.data.find(t => t.postCount > 0);
+  if (withPosts) bru.setEnvVar('tagSlug', withPosts.slug);
+}
+
+tests {
+  test("tags carry post counts", function () {
+    const d = res.body.data;
+    expect(d.length).to.be.above(0);
+    expect(d[0]).to.have.property('slug');
+    expect(d[0]).to.have.property('postCount');
+  });
+}

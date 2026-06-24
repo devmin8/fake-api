@@ -15,6 +15,8 @@ import {
   postCommentReadRoutes,
 } from "~/routes/comments.ts";
 import { postRoutes } from "~/routes/posts.ts";
+import { tagRoutes } from "~/routes/tags.ts";
+import { userRoutes } from "~/routes/users.ts";
 
 // Bring the schema up to date before serving — a fresh checkout boots straight
 // into a fully-tabled ./data/app.db with no manual migrate step.
@@ -72,6 +74,8 @@ const app = new Elysia()
   .use(authRoutes)
   .use(postRoutes.use(postCommentReadRoutes))
   .use(commentRoutes)
+  .use(userRoutes)
+  .use(tagRoutes)
   .listen(config.port);
 
 console.log(

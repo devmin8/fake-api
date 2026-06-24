@@ -1,0 +1,30 @@
+meta {
+  name: Profile
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{testUsername}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.username: eq alice
+  res.body.id: isDefined
+  res.body.postCount: isDefined
+  res.body.followerCount: isDefined
+  res.body.followingCount: isDefined
+}
+
+tests {
+  test("public profile shape, no email", function () {
+    expect(res.body).to.have.property('displayName');
+    expect(res.body).to.not.have.property('email');
+    expect(res.body.postCount).to.be.at.least(0);
+    expect(res.body.followerCount).to.be.at.least(0);
+    expect(res.body.followingCount).to.be.at.least(0);
+  });
+}
