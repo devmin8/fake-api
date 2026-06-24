@@ -1,0 +1,21 @@
+meta {
+  name: Like Post
+  type: http
+  seq: 30
+}
+
+post {
+  url: {{baseUrl}}/api/posts/{{likePostId}}/like
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.liked: eq true
+  res.body.likeCount: eq 1
+}
+
+docs {
+  Post created with likeCount 0; one like bumps it to 1 in the same transaction.
+}

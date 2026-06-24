@@ -1,0 +1,21 @@
+meta {
+  name: Like Post Not Found
+  type: http
+  seq: 170
+}
+
+post {
+  url: {{baseUrl}}/api/posts/01BOGUSPOSTIDDOESNOTEXIST00/like
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+  res.body.error.code: eq NOT_FOUND
+}
+
+docs {
+  Liking a target that doesn't exist is a 404 — the service resolves the target
+  row before touching the likes table.
+}

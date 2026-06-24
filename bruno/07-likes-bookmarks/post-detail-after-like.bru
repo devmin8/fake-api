@@ -1,0 +1,21 @@
+meta {
+  name: Post Detail After Like
+  type: http
+  seq: 50
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{likePostId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.likeCount: eq 1
+}
+
+docs {
+  Cross-verify the denormalized count was persisted (not just computed in the
+  like response): a fresh detail read still reports likeCount 1 after two likes.
+}

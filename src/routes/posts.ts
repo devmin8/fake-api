@@ -13,6 +13,8 @@ import {
   postUpdates,
   updatePost,
 } from "~/services/posts.ts";
+import { like, unlike } from "~/services/likes.ts";
+import { addBookmark, removeBookmark } from "~/services/bookmarks.ts";
 
 import { authGuard } from "~/plugins/auth-guard.ts";
 
@@ -108,4 +110,30 @@ export const postRoutes = new Elysia({ prefix: "/api/posts" })
       return { ok: true };
     },
     { auth: true, detail: { summary: "Delete post", tags: ["posts"] } },
+  )
+
+  // AUTH — like / unlike a post. Idempotent toggles; both return the new count.
+  .post("/:id/like", ({ user, params }) => like(user!.id, "post", params.id), {
+    auth: true,
+    detail: { summary: "Like a post", tags: ["likes"] },
+  })
+  .delete(
+    "/:id/like",
+    ({ user, params }) => unlike(user!.id, "post", params.id),
+    { auth: true, detail: { summary: "Unlike a post", tags: ["likes"] } },
+  )
+
+  // AUTH — bookmark / un-bookmark a post for the caller. Idempotent toggles.
+  .post(
+    "/:id/bookmark",
+    ({ user, params }) => addBookmark(user!.id, params.id),
+    { auth: true, detail: { summary: "Bookmark a post", tags: ["bookmarks"] } },
+  )
+  .delete(
+    "/:id/bookmark",
+    ({ user, params }) => removeBookmark(user!.id, params.id),
+    {
+      auth: true,
+      detail: { summary: "Remove a bookmark", tags: ["bookmarks"] },
+    },
   );

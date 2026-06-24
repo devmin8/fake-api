@@ -11,6 +11,7 @@ import {
   listCommentReplies,
   listPostComments,
 } from "~/services/comments.ts";
+import { like, unlike } from "~/services/likes.ts";
 
 import { authGuard } from "~/plugins/auth-guard.ts";
 
@@ -82,4 +83,16 @@ export const commentRoutes = new Elysia({ prefix: "/api/comments" })
       return { ok: true };
     },
     { auth: true, detail: { summary: "Delete comment", tags: ["comments"] } },
+  )
+
+  // AUTH — like / unlike a comment. Idempotent toggles; both return the new count.
+  .post(
+    "/:id/like",
+    ({ user, params }) => like(user!.id, "comment", params.id),
+    { auth: true, detail: { summary: "Like a comment", tags: ["likes"] } },
+  )
+  .delete(
+    "/:id/like",
+    ({ user, params }) => unlike(user!.id, "comment", params.id),
+    { auth: true, detail: { summary: "Unlike a comment", tags: ["likes"] } },
   );

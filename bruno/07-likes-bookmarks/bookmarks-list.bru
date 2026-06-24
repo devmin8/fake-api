@@ -1,0 +1,24 @@
+meta {
+  name: Bookmarks List
+  type: http
+  seq: 120
+}
+
+get {
+  url: {{baseUrl}}/api/bookmarks
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}
+
+tests {
+  test("the bookmarked post appears in GET /bookmarks", function () {
+    const id = bru.getEnvVar('likePostId');
+    const ids = res.body.data.map(p => p.id);
+    expect(ids).to.include(id);
+  });
+}

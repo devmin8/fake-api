@@ -1,0 +1,30 @@
+meta {
+  name: Create Post
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/posts
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Likes & bookmarks fixture",
+    "body": "Created by the 07-likes-bookmarks suite so it owns its own target."
+  }
+}
+
+script:post-response {
+  // Self-contained fixture: 06 deletes its post at the end, so capture a fresh
+  // one here for the like/bookmark chain rather than reusing writePostId.
+  bru.setEnvVar('likePostId', res.body.id);
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.likeCount: eq 0
+}

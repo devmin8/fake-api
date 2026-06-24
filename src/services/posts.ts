@@ -129,8 +129,9 @@ const trendingScore = (p: {
 };
 
 // Hydrate an ordered list of ids back into public posts, preserving the order
-// the id query produced (a WHERE IN doesn't guarantee it).
-const hydrate = async (ids: string[]): Promise<PublicPost[]> => {
+// the id query produced (a WHERE IN doesn't guarantee it). Exported so other
+// services (bookmarks) can turn their own ordered id lists into public posts.
+export const hydratePosts = async (ids: string[]): Promise<PublicPost[]> => {
   const rows = (await db.query.posts.findMany({
     where: inArray(posts.id, ids),
     with: postWith,
@@ -211,7 +212,7 @@ export async function listPosts(
   const ids = idRows.slice(0, limit).map((r) => r.id);
   if (ids.length === 0) return toEnvelope<PublicPost>([], false, { ranked });
 
-  return toEnvelope(await hydrate(ids), hasMore, { ranked });
+  return toEnvelope(await hydratePosts(ids), hasMore, { ranked });
 }
 
 // Detail read. Increments view_count by 1 per call (the broadcast is wired in
@@ -331,7 +332,7 @@ export async function createPost(
     if (input.tags?.length) linkTags(tx, id, input.tags);
   });
 
-  const [post] = await hydrate([id]);
+  const [post] = await hydratePosts([id]);
   return post;
 }
 
@@ -364,7 +365,7 @@ export async function updatePost(
     }
   });
 
-  const [post] = await hydrate([id]);
+  const [post] = await hydratePosts([id]);
   return post;
 }
 

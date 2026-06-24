@@ -1,0 +1,25 @@
+meta {
+  name: Create Comment
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{baseUrl}}/api/posts/{{likePostId}}/comments
+  body: json
+  auth: none
+}
+
+body:json {
+  { "body": "Comment to be liked by the 07 suite." }
+}
+
+script:post-response {
+  bru.setEnvVar('likeCommentId', res.body.id);
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.likeCount: eq 0
+}

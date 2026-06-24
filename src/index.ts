@@ -15,6 +15,7 @@ import {
   postCommentRoutes,
 } from "~/routes/comments.ts";
 import { postRoutes } from "~/routes/posts.ts";
+import { bookmarkRoutes } from "~/routes/bookmarks.ts";
 import { tagRoutes } from "~/routes/tags.ts";
 import { userRoutes } from "~/routes/users.ts";
 
@@ -76,6 +77,7 @@ const app = new Elysia()
   .use(commentRoutes)
   .use(userRoutes)
   .use(tagRoutes)
+  .use(bookmarkRoutes)
   .listen(config.port);
 
 console.log(

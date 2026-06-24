@@ -1,0 +1,22 @@
+meta {
+  name: Like Comment
+  type: http
+  seq: 80
+}
+
+post {
+  url: {{baseUrl}}/api/comments/{{likeCommentId}}/like
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.liked: eq true
+  res.body.likeCount: eq 1
+}
+
+docs {
+  Polymorphic like over a comment behaves exactly like a post like, bumping the
+  comment's own like_count.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Like Post Again
+  type: http
+  seq: 40
+}
+
+post {
+  url: {{baseUrl}}/api/posts/{{likePostId}}/like
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.liked: eq true
+  res.body.likeCount: eq 1
+}
+
+docs {
+  Double-like guard: liking again is idempotent. The unique (user, target_type,
+  target_id) constraint means no second like row, so the count stays at 1 — it
+  never double-counts.
+}

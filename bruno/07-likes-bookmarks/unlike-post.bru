@@ -1,0 +1,21 @@
+meta {
+  name: Unlike Post
+  type: http
+  seq: 60
+}
+
+delete {
+  url: {{baseUrl}}/api/posts/{{likePostId}}/like
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.liked: eq false
+  res.body.likeCount: eq 0
+}
+
+docs {
+  Unlike removes the single like row and decrements the count back to 0.
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Post Detail After Unlike
+  type: http
+  seq: 70
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{likePostId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.likeCount: eq 0
+}
+
+docs {
+  The count is back at its starting value — no drift across like → like → unlike.
+}

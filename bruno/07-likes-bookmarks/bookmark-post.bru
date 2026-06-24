@@ -1,0 +1,17 @@
+meta {
+  name: Bookmark Post
+  type: http
+  seq: 110
+}
+
+post {
+  url: {{baseUrl}}/api/posts/{{likePostId}}/bookmark
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.bookmarked: eq true
+  res.body.postId: eq {{likePostId}}
+}

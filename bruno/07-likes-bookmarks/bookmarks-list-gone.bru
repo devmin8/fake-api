@@ -1,0 +1,24 @@
+meta {
+  name: Bookmarks List Gone
+  type: http
+  seq: 140
+}
+
+get {
+  url: {{baseUrl}}/api/bookmarks
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}
+
+tests {
+  test("the un-bookmarked post no longer appears in GET /bookmarks", function () {
+    const id = bru.getEnvVar('likePostId');
+    const ids = res.body.data.map(p => p.id);
+    expect(ids).to.not.include(id);
+  });
+}

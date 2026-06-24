@@ -1,0 +1,17 @@
+meta {
+  name: Unbookmark Post
+  type: http
+  seq: 130
+}
+
+delete {
+  url: {{baseUrl}}/api/posts/{{likePostId}}/bookmark
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.bookmarked: eq false
+  res.body.postId: eq {{likePostId}}
+}

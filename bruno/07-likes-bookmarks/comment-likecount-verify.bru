@@ -1,0 +1,25 @@
+meta {
+  name: Comment Likecount Verify
+  type: http
+  seq: 90
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{likePostId}}/comments
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}
+
+tests {
+  test("the liked comment reads likeCount 1 from the comments feed", function () {
+    const id = bru.getEnvVar('likeCommentId');
+    const c = res.body.data.find(x => x.id === id);
+    expect(c, 'liked comment present in feed').to.not.be.undefined;
+    expect(c.likeCount).to.equal(1);
+  });
+}
