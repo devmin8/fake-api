@@ -24,6 +24,7 @@ import {
 } from "~/lib/cursor.ts";
 import { errors } from "~/lib/errors.ts";
 import { newId } from "~/lib/ids.ts";
+import { hub } from "~/lib/realtime.ts";
 
 export type Sort = "new" | "top" | "trending";
 
@@ -237,6 +238,14 @@ export async function getPostById(id: string): Promise<PublicPost> {
 
   const post = toPublicPost(row);
   post.viewCount += 1;
+
+  // Post-commit: the bump above is already durable. Watchers of this post get
+  // the fresh view count without re-fetching.
+  hub.broadcast(`post:${id}`, "post.viewed", {
+    postId: id,
+    viewCount: post.viewCount,
+  });
+
   return post;
 }
 
@@ -339,6 +348,16 @@ export async function createPost(
   });
 
   const [post] = await hydratePosts([id]);
+
+  // Post-commit broadcast: announce the new post on the global feed and on each
+  // of its tag topics. Per the design, `post.created` is a "something's new"
+  // signal — clients reconcile via GET /posts?dir=newer — but we ship the full
+  // public post as the payload so a fat-payload client can render immediately.
+  hub.broadcast("feed:global", "post.created", post);
+  for (const tag of post.tags) {
+    hub.broadcast(`tag:${tag.slug}`, "post.created", post);
+  }
+
   return post;
 }
 

@@ -23,6 +23,7 @@ import {
 } from "~/lib/cursor.ts";
 import { errors } from "~/lib/errors.ts";
 import { newId } from "~/lib/ids.ts";
+import { hub } from "~/lib/realtime.ts";
 
 export interface NotificationActor {
   id: string;
@@ -62,16 +63,31 @@ export interface ListNotificationsParams {
 // on your own post never notifies you.
 export function createNotification(input: CreateNotificationInput): void {
   if (input.userId === input.actorId) return;
+  const id = newId();
+  const entityType = input.entityType ?? null;
+  const entityId = input.entityId ?? null;
   db.insert(notifications)
     .values({
-      id: newId(),
+      id,
       userId: input.userId,
       actorId: input.actorId,
       type: input.type,
-      entityType: input.entityType ?? null,
-      entityId: input.entityId ?? null,
+      entityType,
+      entityId,
     })
     .run();
+
+  // Post-commit: the recipient's own user:{id} topic gets a "you have a new
+  // notification" signal. It's per-user and auth-gated at subscribe, so only the
+  // recipient ever receives it. A signal, not the source — clients re-fetch via
+  // GET /notifications — so we send identifiers, not the hydrated actor card.
+  hub.broadcast(`user:${input.userId}`, "notification.created", {
+    id,
+    type: input.type,
+    entityType,
+    entityId,
+    actorId: input.actorId,
+  });
 }
 
 const notificationWith = {

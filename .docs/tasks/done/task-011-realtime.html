@@ -56,6 +56,28 @@
     the existing Bruno folders.</p>
   </section>
 
+  <section>
+    <div class="sec-head"><span class="sec-num">✎</span><h2>Handoff notes</h2></div>
+    <ul>
+      <li><strong>Broadcasts live in the services, not the routes.</strong> Each mutation calls
+      <code>hub.broadcast(...)</code> right after its <code>db.transaction</code> returns (commit
+      is synchronous with bun:sqlite). So <strong>task-013's firehose gets WS events for free</strong>
+      — drive the same <code>services/*</code> functions and the wire fills itself. Don't add a
+      second broadcast layer in the simulator or events will double-fire.</li>
+      <li>Events wired, by topic: <code>feed:global</code> + <code>tag:{slug}</code> →
+      <code>post.created</code>; <code>post:{id}</code> → <code>post.viewed</code> /
+      <code>post.liked</code> / <code>post.unliked</code> / <code>comment.created</code> /
+      <code>comment.liked</code>; <code>user:{id}</code> → <code>notification.created</code>.
+      The design lists no <code>comment.unliked</code> / delete / update events, so those mutations
+      stay silent on the wire by design.</li>
+      <li><code>user:{id}</code> gating: the access cookie is verified at upgrade by
+      <code>authGuard</code>'s scoped <code>derive</code> (so <code>ws.data.user</code> is the
+      session), and the WS route only lets you subscribe to your <em>own</em> id. Anonymous or
+      mismatched subscribes get a <code>FORBIDDEN</code> error frame, not a dropped connection —
+      public topics still work on the same socket.</li>
+    </ul>
+  </section>
+
   <footer>fake-api · task-011 · build order milestone 6 (Realtime)</footer>
 </div>
 </body>

@@ -17,6 +17,7 @@ import { db } from "~/db/index.ts";
 import { comments, likes, posts } from "~/db/schema.ts";
 import { errors } from "~/lib/errors.ts";
 import { newId } from "~/lib/ids.ts";
+import { hub } from "~/lib/realtime.ts";
 
 import { createNotification } from "~/services/notifications.ts";
 
@@ -34,18 +35,26 @@ export interface LikeResult {
 const tableFor = (targetType: LikeTarget) =>
   targetType === "post" ? posts : comments;
 
-// Load the target's current like_count and author, or 404 if it doesn't exist.
-// The author is the recipient of the like notification.
+// Load the target's current like_count, author, and the post it belongs to, or
+// 404 if it doesn't exist. The author is the recipient of the like notification;
+// `postId` is the broadcast topic — for a post that's the target itself, for a
+// comment it's the comment's parent post (both like events ride the post topic).
 const loadTarget = (
   targetType: LikeTarget,
   targetId: string,
-): { likeCount: number; authorId: string } => {
-  const table = tableFor(targetType);
-  const row = db
-    .select({ likeCount: table.likeCount, authorId: table.authorId })
-    .from(table)
-    .where(eq(table.id, targetId))
-    .get();
+): { likeCount: number; authorId: string; postId: string } => {
+  const row =
+    targetType === "post"
+      ? db
+          .select({ likeCount: posts.likeCount, authorId: posts.authorId, postId: posts.id })
+          .from(posts)
+          .where(eq(posts.id, targetId))
+          .get()
+      : db
+          .select({ likeCount: comments.likeCount, authorId: comments.authorId, postId: comments.postId })
+          .from(comments)
+          .where(eq(comments.id, targetId))
+          .get();
   if (!row) {
     throw errors.notFound(
       targetType === "post" ? "Post not found" : "Comment not found",
@@ -89,9 +98,23 @@ export async function like(
     created = true;
   });
 
-  // Only a fresh like notifies — a re-like is a silent no-op (self-likes drop
-  // inside createNotification).
+  // Only a fresh like notifies/broadcasts — a re-like is a silent no-op so the
+  // count can't drift and watchers don't see a phantom event. Both events ride
+  // the post topic with the fresh count; self-likes still drop their own
+  // notification inside createNotification.
   if (created) {
+    if (targetType === "post") {
+      hub.broadcast(`post:${target.postId}`, "post.liked", {
+        postId: target.postId,
+        likeCount,
+      });
+    } else {
+      hub.broadcast(`post:${target.postId}`, "comment.liked", {
+        postId: target.postId,
+        commentId: targetId,
+        likeCount,
+      });
+    }
     createNotification({
       userId: target.authorId,
       actorId: userId,
@@ -110,8 +133,10 @@ export async function unlike(
   targetId: string,
 ): Promise<LikeResult> {
   const table = tableFor(targetType);
-  let likeCount = loadTarget(targetType, targetId).likeCount;
+  const target = loadTarget(targetType, targetId);
+  let likeCount = target.likeCount;
 
+  let removed = false;
   db.transaction((tx) => {
     const existing = tx
       .select({ id: likes.id })
@@ -134,7 +159,18 @@ export async function unlike(
       .where(eq(table.id, targetId))
       .run();
     likeCount = Math.max(0, likeCount - 1);
+    removed = true;
   });
+
+  // Only a real removal broadcasts. The design's post topic carries post.unliked
+  // (post targets); there's no comment.unliked event, so a comment unlike stays
+  // silent on the wire — the REST result still reflects the dropped count.
+  if (removed && targetType === "post") {
+    hub.broadcast(`post:${target.postId}`, "post.unliked", {
+      postId: target.postId,
+      likeCount,
+    });
+  }
 
   return { targetType, targetId, liked: false, likeCount };
 }

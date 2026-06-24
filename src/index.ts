@@ -1,6 +1,6 @@
 // fake-api entry point.
-// Mounts plugins (CORS, Swagger), the global error envelope, and the routes.
-// Later tickets add DB, auth, the realtime hub, and the simulator here.
+// Mounts plugins (CORS, Swagger), the global error envelope, the routes, and the
+// realtime WS endpoint. A later ticket adds the firehose simulator here.
 
 import { Elysia } from "elysia";
 import { swagger } from "@elysiajs/swagger";
@@ -20,6 +20,7 @@ import { feedRoutes } from "~/routes/feed.ts";
 import { notificationRoutes } from "~/routes/notifications.ts";
 import { tagRoutes } from "~/routes/tags.ts";
 import { userRoutes } from "~/routes/users.ts";
+import { wsRoutes } from "~/routes/ws.ts";
 
 // Bring the schema up to date before serving — a fresh checkout boots straight
 // into a fully-tabled ./data/app.db with no manual migrate step.
@@ -82,6 +83,7 @@ const app = new Elysia()
   .use(bookmarkRoutes)
   .use(feedRoutes)
   .use(notificationRoutes)
+  .use(wsRoutes)
   .listen(config.port);
 
 console.log(

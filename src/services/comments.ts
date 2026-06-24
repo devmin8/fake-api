@@ -23,6 +23,7 @@ import {
 } from "~/lib/cursor.ts";
 import { errors } from "~/lib/errors.ts";
 import { newId } from "~/lib/ids.ts";
+import { hub } from "~/lib/realtime.ts";
 
 import { createNotification } from "~/services/notifications.ts";
 
@@ -216,14 +217,18 @@ export async function createComment(
   const id = newId();
   const createdAt = new Date().toISOString();
 
+  let commentCount = 0;
   db.transaction((tx) => {
     tx.insert(comments)
       .values({ id, postId, authorId, parentId, body: input.body, createdAt })
       .run();
-    tx.update(posts)
+    const updated = tx
+      .update(posts)
       .set({ commentCount: sql`${posts.commentCount} + 1` })
       .where(eq(posts.id, postId))
-      .run();
+      .returning({ commentCount: posts.commentCount })
+      .get();
+    commentCount = updated.commentCount;
   });
 
   // Self-comments drop inside createNotification (recipient === actor).
@@ -239,7 +244,12 @@ export async function createComment(
     where: eq(comments.id, id),
     with: commentWith,
   })) as HydratedComment;
-  return toPublicComment(row, 0);
+  const comment = toPublicComment(row, 0);
+
+  // Post-commit: watchers of this post get the new comment plus the fresh count.
+  hub.broadcast(`post:${postId}`, "comment.created", { postId, commentCount, comment });
+
+  return comment;
 }
 
 // Delete a comment the caller owns. Replies cascade via the parent_id FK; their

@@ -30,11 +30,16 @@ Built ticket-by-ticket. The current task is whatever
 ```bash
 bun install
 bun run db:migrate && bun run db:seed
-bun run dev                          # API on $PORT
+bun run dev                          # API on $PORT (REST + ws://…/ws)
 cd bruno && bru run --env local      # run the API test suite
+bun run scripts/ws-smoke.ts          # realtime check (server must be running)
 ```
 
-Swagger lives at `/docs`.
+Swagger lives at `/docs`. The realtime endpoint is `ws://<host>/ws`: subscribe with
+`{ "action": "subscribe", "topic": "feed:global" }` and the server pushes
+`{ topic, event, data, ts }` envelopes. Public topics (`feed:global`, `tag:{slug}`,
+`post:{id}`) are open; `user:{id}` requires the access-token cookie at upgrade and only
+the owner may subscribe.
 
 ## Working on it
 
@@ -43,4 +48,5 @@ Swagger lives at `/docs`.
 - **Tasks:** [`.docs/tasks/backlog/`](.docs/tasks/backlog/) (`done/` is history).
 - **Testing:** Bruno, one folder per resource under `bruno/`, per
   [`.docs/tasks/bruno-testing-plan.html`](.docs/tasks/bruno-testing-plan.html). No unit tests.
+  WebSockets aren't Bruno-testable — `scripts/ws-smoke.ts` covers the realtime path instead.
 - For agents: see [`CLAUDE.md`](CLAUDE.md).
