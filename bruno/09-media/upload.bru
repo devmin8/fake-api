@@ -1,0 +1,33 @@
+meta {
+  name: Upload
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{baseUrl}}/api/media
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(09-media/fixtures/sample.png)
+}
+
+script:post-response {
+  // Hand the returned URL to the chained serve + create-post requests below.
+  bru.setEnvVar('mediaUrl', res.body.url);
+}
+
+assert {
+  res.status: eq 201
+  res.body.url: isDefined
+  res.body.mime: eq image/png
+  res.body.id: isDefined
+}
+
+tests {
+  test("url points at the media serve route", function () {
+    expect(res.body.url).to.match(/^\/api\/media\/[0-9A-Za-z]+\.png$/);
+  });
+}

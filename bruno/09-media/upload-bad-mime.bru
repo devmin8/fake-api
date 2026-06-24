@@ -1,0 +1,25 @@
+meta {
+  name: Upload Bad Mime
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/api/media
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(09-media/fixtures/not-an-image.txt)
+}
+
+assert {
+  res.status: eq 422
+  res.body.error.code: eq VALIDATION_ERROR
+}
+
+docs {
+  Authenticated (collection injects alice's session) but the file is a text file,
+  not an image. The service's images-only mime check rejects it with a 422.
+}

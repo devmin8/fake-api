@@ -26,6 +26,9 @@ export const config = {
   port: int("PORT", 3000),
   dbPath: str("DB_PATH", "./data/app.db"),
 
+  uploadDir: str("UPLOAD_DIR", "./data/uploads"),
+  mediaMaxBytes: int("MEDIA_MAX_BYTES", 5 * 1024 * 1024),
+
   jwtSecret: str("JWT_SECRET", "change-me-locally"),
   accessTokenTtl: str("ACCESS_TOKEN_TTL", "15m"),
   refreshTokenTtl: str("REFRESH_TOKEN_TTL", "7d"),

@@ -17,6 +17,7 @@ import {
 import { postRoutes } from "~/routes/posts.ts";
 import { bookmarkRoutes } from "~/routes/bookmarks.ts";
 import { feedRoutes } from "~/routes/feed.ts";
+import { mediaRoutes } from "~/routes/media.ts";
 import { notificationRoutes } from "~/routes/notifications.ts";
 import { tagRoutes } from "~/routes/tags.ts";
 import { userRoutes } from "~/routes/users.ts";
@@ -82,6 +83,7 @@ const app = new Elysia()
   .use(tagRoutes)
   .use(bookmarkRoutes)
   .use(feedRoutes)
+  .use(mediaRoutes)
   .use(notificationRoutes)
   .use(wsRoutes)
   .listen(config.port);

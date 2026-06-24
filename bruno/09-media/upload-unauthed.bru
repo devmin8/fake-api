@@ -1,0 +1,27 @@
+meta {
+  name: Upload Unauthed
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/media
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(09-media/fixtures/sample.png)
+}
+
+script:pre-request {
+  // Clobber the injected session cookie so the request arrives unauthenticated —
+  // the auth guard 401s before any upload work. The file is valid on purpose, so
+  // we're asserting the auth boundary (401), not validation.
+  req.setHeader('Cookie', 'x=1');
+}
+
+assert {
+  res.status: eq 401
+  res.body.error.code: eq UNAUTHENTICATED
+}

@@ -1,0 +1,29 @@
+meta {
+  name: Create Post With Media
+  type: http
+  seq: 40
+}
+
+post {
+  url: {{baseUrl}}/api/posts
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Post with an uploaded image",
+    "body": "Uses the URL returned by POST /api/media as its image_url.",
+    "imageUrl": "{{mediaUrl}}"
+  }
+}
+
+script:post-response {
+  bru.setEnvVar('mediaPostId', res.body.id);
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.imageUrl: eq {{mediaUrl}}
+}

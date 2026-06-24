@@ -1,0 +1,23 @@
+meta {
+  name: Serve
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrl}}{{mediaUrl}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.headers['content-type']: eq image/png
+}
+
+docs {
+  Fetches the URL captured by the Upload request and asserts a 200 with the
+  stored image content-type. We don't byte-assert the body: the bru CLI decodes
+  a binary response as text, which mangles the PNG signature — the status +
+  content-type are the meaningful round-trip proof.
+}

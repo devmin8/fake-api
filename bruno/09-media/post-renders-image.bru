@@ -1,0 +1,17 @@
+meta {
+  name: Post Renders Image
+  type: http
+  seq: 50
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{mediaPostId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: eq {{mediaPostId}}
+  res.body.imageUrl: eq {{mediaUrl}}
+}
