@@ -1,0 +1,29 @@
+meta {
+  name: Patch Me
+  type: http
+  seq: 80
+}
+
+patch {
+  url: {{baseUrl}}/api/users/me
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "displayName": "Alice Updated",
+    "bio": "Edited by the task-010 suite."
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.displayName: eq Alice Updated
+  res.body.bio: eq Edited by the task-010 suite.
+  res.body.username: eq {{testUsername}}
+}
+
+docs {
+  Self-edit touches only displayName/bio/avatarUrl; username/email stay fixed.
+}

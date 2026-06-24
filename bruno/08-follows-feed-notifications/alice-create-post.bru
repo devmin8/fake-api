@@ -1,0 +1,29 @@
+meta {
+  name: Alice Create Post
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{baseUrl}}/api/posts
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Alice's post for notifications",
+    "body": "bob likes and comments on this so alice's inbox fills up."
+  }
+}
+
+script:post-response {
+  // alice owns this post (collection injects alice). bob acts on it later so the
+  // resulting like/comment notifications land in alice's — the session's — inbox.
+  bru.setEnvVar('notifPostId', res.body.id);
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+}

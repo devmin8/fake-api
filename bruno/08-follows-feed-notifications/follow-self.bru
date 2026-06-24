@@ -1,0 +1,20 @@
+meta {
+  name: Follow Self
+  type: http
+  seq: 32
+}
+
+post {
+  url: {{baseUrl}}/api/users/{{testUsername}}/follow
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 422
+  res.body.error.code: eq VALIDATION_ERROR
+}
+
+docs {
+  alice can't follow alice — the service guards self-follow before inserting a row.
+}

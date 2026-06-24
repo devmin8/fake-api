@@ -1,0 +1,22 @@
+meta {
+  name: Follow Verify Profile
+  type: http
+  seq: 36
+}
+
+get {
+  url: {{baseUrl}}/api/users/bob
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.username: eq bob
+}
+
+tests {
+  test("bob's derived follower count reflects the follow", function () {
+    expect(res.body.followerCount).to.be.at.least(1);
+  });
+}

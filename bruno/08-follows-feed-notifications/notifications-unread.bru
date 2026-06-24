@@ -1,0 +1,27 @@
+meta {
+  name: Notifications Unread Filter
+  type: http
+  seq: 62
+}
+
+get {
+  url: {{baseUrl}}/api/notifications?unread=true
+  body: none
+  auth: none
+}
+
+params:query {
+  unread: true
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}
+
+tests {
+  test("?unread=true returns only is_read=false rows", function () {
+    expect(res.body.data.length).to.be.at.least(1);
+    res.body.data.forEach((n) => expect(n.isRead).to.equal(false));
+  });
+}

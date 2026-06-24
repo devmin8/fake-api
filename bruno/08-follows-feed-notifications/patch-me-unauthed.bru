@@ -1,0 +1,24 @@
+meta {
+  name: Patch Me Unauthed
+  type: http
+  seq: 86
+}
+
+patch {
+  url: {{baseUrl}}/api/users/me
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  req.setHeader('Cookie', 'x=1');
+}
+
+body:json {
+  { "displayName": "Should Not Apply" }
+}
+
+assert {
+  res.status: eq 401
+  res.body.error.code: eq UNAUTHENTICATED
+}

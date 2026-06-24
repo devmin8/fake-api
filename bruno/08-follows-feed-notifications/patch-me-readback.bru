@@ -1,0 +1,20 @@
+meta {
+  name: Patch Me Readback
+  type: http
+  seq: 82
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{testUsername}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.displayName: eq Alice Updated
+}
+
+docs {
+  The public profile reflects the edit — the write actually persisted.
+}

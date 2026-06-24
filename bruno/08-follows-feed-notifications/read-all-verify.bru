@@ -1,0 +1,26 @@
+meta {
+  name: Read All Verify
+  type: http
+  seq: 76
+}
+
+get {
+  url: {{baseUrl}}/api/notifications?unread=true
+  body: none
+  auth: none
+}
+
+params:query {
+  unread: true
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}
+
+tests {
+  test("no unread notifications remain after read-all", function () {
+    expect(res.body.data.length).to.equal(0);
+  });
+}

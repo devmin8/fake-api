@@ -1,0 +1,22 @@
+meta {
+  name: Mark All Read
+  type: http
+  seq: 74
+}
+
+post {
+  url: {{baseUrl}}/api/notifications/read-all
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.updated: isDefined
+}
+
+tests {
+  test("read-all flipped the remaining unread rows", function () {
+    expect(res.body.updated).to.be.at.least(1);
+  });
+}

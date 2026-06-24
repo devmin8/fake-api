@@ -1,0 +1,27 @@
+meta {
+  name: Feed
+  type: http
+  seq: 40
+}
+
+get {
+  url: {{baseUrl}}/api/feed
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}
+
+tests {
+  test("feed contains bob's post now that alice follows him", function () {
+    const ids = res.body.data.map((p) => p.id);
+    expect(ids).to.include(bru.getEnvVar('feedPostId'));
+  });
+}
+
+docs {
+  Feed is posts from followed users only. alice follows bob → bob's post appears.
+}

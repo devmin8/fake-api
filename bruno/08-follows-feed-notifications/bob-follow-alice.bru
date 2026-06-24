@@ -1,0 +1,31 @@
+meta {
+  name: Bob Follows Alice
+  type: http
+  seq: 54
+}
+
+post {
+  url: {{baseUrl}}/api/users/{{testUsername}}/follow
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  const access = bru.getEnvVar('secondAccessToken');
+  const csrf   = bru.getEnvVar('secondCsrfToken');
+  const parts = [];
+  if (access) parts.push(`access_token=${access}`);
+  if (csrf)   parts.push(`csrf_token=${csrf}`);
+  req.setHeader('Cookie', parts.join('; '));
+  if (csrf) req.setHeader('X-CSRF-Token', csrf);
+}
+
+assert {
+  res.status: eq 200
+  res.body.following: eq true
+}
+
+docs {
+  bob follows alice → a "follow" notification for alice. Now alice's inbox holds
+  a like, a comment and a follow.
+}

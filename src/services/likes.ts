@@ -18,6 +18,8 @@ import { comments, likes, posts } from "~/db/schema.ts";
 import { errors } from "~/lib/errors.ts";
 import { newId } from "~/lib/ids.ts";
 
+import { createNotification } from "~/services/notifications.ts";
+
 export type LikeTarget = "post" | "comment";
 
 export interface LikeResult {
@@ -32,11 +34,15 @@ export interface LikeResult {
 const tableFor = (targetType: LikeTarget) =>
   targetType === "post" ? posts : comments;
 
-// Load the target's current like_count, or 404 if it doesn't exist.
-const loadTarget = (targetType: LikeTarget, targetId: string): number => {
+// Load the target's current like_count and author, or 404 if it doesn't exist.
+// The author is the recipient of the like notification.
+const loadTarget = (
+  targetType: LikeTarget,
+  targetId: string,
+): { likeCount: number; authorId: string } => {
   const table = tableFor(targetType);
   const row = db
-    .select({ likeCount: table.likeCount })
+    .select({ likeCount: table.likeCount, authorId: table.authorId })
     .from(table)
     .where(eq(table.id, targetId))
     .get();
@@ -45,7 +51,7 @@ const loadTarget = (targetType: LikeTarget, targetId: string): number => {
       targetType === "post" ? "Post not found" : "Comment not found",
     );
   }
-  return row.likeCount;
+  return row;
 };
 
 export async function like(
@@ -54,8 +60,10 @@ export async function like(
   targetId: string,
 ): Promise<LikeResult> {
   const table = tableFor(targetType);
-  let likeCount = loadTarget(targetType, targetId);
+  const target = loadTarget(targetType, targetId);
+  let likeCount = target.likeCount;
 
+  let created = false;
   db.transaction((tx) => {
     const existing = tx
       .select({ id: likes.id })
@@ -78,7 +86,20 @@ export async function like(
       .where(eq(table.id, targetId))
       .run();
     likeCount += 1;
+    created = true;
   });
+
+  // Only a fresh like notifies — a re-like is a silent no-op (self-likes drop
+  // inside createNotification).
+  if (created) {
+    createNotification({
+      userId: target.authorId,
+      actorId: userId,
+      type: "like",
+      entityType: targetType,
+      entityId: targetId,
+    });
+  }
 
   return { targetType, targetId, liked: true, likeCount };
 }
@@ -89,7 +110,7 @@ export async function unlike(
   targetId: string,
 ): Promise<LikeResult> {
   const table = tableFor(targetType);
-  let likeCount = loadTarget(targetType, targetId);
+  let likeCount = loadTarget(targetType, targetId).likeCount;
 
   db.transaction((tx) => {
     const existing = tx

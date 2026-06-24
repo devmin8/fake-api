@@ -1,0 +1,20 @@
+meta {
+  name: Notifications Unauthed
+  type: http
+  seq: 64
+}
+
+get {
+  url: {{baseUrl}}/api/notifications
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  req.setHeader('Cookie', 'x=1');
+}
+
+assert {
+  res.status: eq 401
+  res.body.error.code: eq UNAUTHENTICATED
+}

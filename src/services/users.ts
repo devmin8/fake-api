@@ -14,6 +14,7 @@ import {
 } from "~/lib/cursor.ts";
 import { errors } from "~/lib/errors.ts";
 
+import { type PublicUser, toPublicUser } from "~/plugins/auth-guard.ts";
 import { listPosts, type PublicPost } from "~/services/posts.ts";
 
 export interface PublicProfile {
@@ -47,6 +48,15 @@ export interface ListFollowParams {
   cursor?: string;
   dir: Direction;
   limit: number;
+}
+
+// Self-edit: only these three fields are mutable; everything else (username,
+// email, isBot) is fixed after registration. An omitted key leaves the column
+// untouched; bio/avatarUrl accept null to clear.
+export interface UpdateMeInput {
+  displayName?: string;
+  bio?: string | null;
+  avatarUrl?: string | null;
 }
 
 const publicUserColumns = {
@@ -195,4 +205,25 @@ export async function listUserFollowing(
   params: ListFollowParams,
 ): Promise<Envelope<PublicUserCard>> {
   return paginateFollowUsers(username, "following", params);
+}
+
+// The caller's own profile edit. Touches only the allowed columns, stamps
+// updated_at, and returns the full public user (including email — it's the
+// owner reading their own row).
+export async function updateMe(
+  userId: string,
+  input: UpdateMeInput,
+): Promise<PublicUser> {
+  const set: Record<string, unknown> = {
+    updatedAt: new Date().toISOString(),
+  };
+  if (input.displayName !== undefined) set.displayName = input.displayName;
+  if (input.bio !== undefined) set.bio = input.bio;
+  if (input.avatarUrl !== undefined) set.avatarUrl = input.avatarUrl;
+
+  db.update(users).set(set).where(eq(users.id, userId)).run();
+
+  const row = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  if (!row) throw errors.notFound("User not found");
+  return toPublicUser(row);
 }

@@ -1,0 +1,40 @@
+meta {
+  name: Bob Create Post
+  type: http
+  seq: 22
+}
+
+post {
+  url: {{baseUrl}}/api/posts
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  // Act as bob (not the injected alice) so this post is bob's — it must appear
+  // in alice's feed once she follows him.
+  const access = bru.getEnvVar('secondAccessToken');
+  const csrf   = bru.getEnvVar('secondCsrfToken');
+  const parts = [];
+  if (access) parts.push(`access_token=${access}`);
+  if (csrf)   parts.push(`csrf_token=${csrf}`);
+  req.setHeader('Cookie', parts.join('; '));
+  if (csrf) req.setHeader('X-CSRF-Token', csrf);
+}
+
+body:json {
+  {
+    "title": "Bob's post for the feed",
+    "body": "Shows up in alice's feed after she follows bob."
+  }
+}
+
+script:post-response {
+  bru.setEnvVar('feedPostId', res.body.id);
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.author.username: eq bob
+}

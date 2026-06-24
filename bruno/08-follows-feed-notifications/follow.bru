@@ -1,0 +1,29 @@
+meta {
+  name: Follow Bob
+  type: http
+  seq: 30
+}
+
+post {
+  url: {{baseUrl}}/api/users/bob/follow
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.following: eq true
+  res.body.username: eq bob
+}
+
+tests {
+  test("bob gained at least one follower", function () {
+    expect(res.body.followerCount).to.be.at.least(1);
+  });
+}
+
+docs {
+  alice follows bob (idempotent — re-running returns following:true unchanged).
+  This also writes a follow notification to bob, asserted from bob's side later
+  is out of scope; we assert alice's own inbox instead.
+}

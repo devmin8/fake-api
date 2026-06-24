@@ -1,0 +1,34 @@
+meta {
+  name: Bob Comments Alice's Post
+  type: http
+  seq: 52
+}
+
+post {
+  url: {{baseUrl}}/api/posts/{{notifPostId}}/comments
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  const access = bru.getEnvVar('secondAccessToken');
+  const csrf   = bru.getEnvVar('secondCsrfToken');
+  const parts = [];
+  if (access) parts.push(`access_token=${access}`);
+  if (csrf)   parts.push(`csrf_token=${csrf}`);
+  req.setHeader('Cookie', parts.join('; '));
+  if (csrf) req.setHeader('X-CSRF-Token', csrf);
+}
+
+body:json {
+  { "body": "Nice post, alice!" }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+}
+
+docs {
+  A top-level comment by bob on alice's post → a "comment" notification for alice.
+}

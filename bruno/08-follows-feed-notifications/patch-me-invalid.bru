@@ -1,0 +1,24 @@
+meta {
+  name: Patch Me Invalid
+  type: http
+  seq: 84
+}
+
+patch {
+  url: {{baseUrl}}/api/users/me
+  body: json
+  auth: none
+}
+
+body:json {
+  { "displayName": "" }
+}
+
+assert {
+  res.status: eq 422
+  res.body.error.code: eq VALIDATION_ERROR
+}
+
+docs {
+  displayName has a minLength — an empty string fails validation before the service.
+}

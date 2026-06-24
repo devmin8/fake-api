@@ -1,0 +1,21 @@
+meta {
+  name: Follow Unauthed
+  type: http
+  seq: 34
+}
+
+post {
+  url: {{baseUrl}}/api/users/bob/follow
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // Clobber the injected session so the request arrives unauthenticated.
+  req.setHeader('Cookie', 'x=1');
+}
+
+assert {
+  res.status: eq 401
+  res.body.error.code: eq UNAUTHENTICATED
+}

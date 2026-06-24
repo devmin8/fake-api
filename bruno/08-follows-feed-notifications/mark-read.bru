@@ -1,0 +1,21 @@
+meta {
+  name: Mark One Read
+  type: http
+  seq: 70
+}
+
+post {
+  url: {{baseUrl}}/api/notifications/{{notifId}}/read
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: eq {{notifId}}
+  res.body.isRead: eq true
+}
+
+docs {
+  Flips a single notification's is_read; the response echoes the updated row.
+}

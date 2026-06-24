@@ -1,0 +1,36 @@
+meta {
+  name: Notifications List
+  type: http
+  seq: 60
+}
+
+get {
+  url: {{baseUrl}}/api/notifications
+  body: none
+  auth: none
+}
+
+script:post-response {
+  // Newest-first; grab the head id to mark it read later.
+  if (res.body.data && res.body.data.length) {
+    bru.setEnvVar('notifId', res.body.data[0].id);
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}
+
+tests {
+  test("alice's inbox holds bob's like, comment and follow", function () {
+    const types = res.body.data.map((n) => n.type);
+    expect(types).to.include('like');
+    expect(types).to.include('comment');
+    expect(types).to.include('follow');
+  });
+  test("every notification carries the bob actor card", function () {
+    const fromBob = res.body.data.filter((n) => n.actor.username === 'bob');
+    expect(fromBob.length).to.be.at.least(3);
+  });
+}

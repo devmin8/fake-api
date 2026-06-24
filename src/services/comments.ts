@@ -24,6 +24,8 @@ import {
 import { errors } from "~/lib/errors.ts";
 import { newId } from "~/lib/ids.ts";
 
+import { createNotification } from "~/services/notifications.ts";
+
 export interface CommentAuthor {
   id: string;
   username: string;
@@ -189,22 +191,26 @@ export async function createComment(
   input: CreateCommentInput,
 ): Promise<PublicComment> {
   const post = db
-    .select({ id: posts.id })
+    .select({ id: posts.id, authorId: posts.authorId })
     .from(posts)
     .where(eq(posts.id, postId))
     .get();
   if (!post) throw errors.notFound("Post not found");
 
   const parentId = input.parentId ?? null;
+  // A reply notifies the comment it answers; a top-level comment notifies the
+  // post's author.
+  let recipientId = post.authorId;
   if (parentId) {
     const parent = db
-      .select({ postId: comments.postId })
+      .select({ postId: comments.postId, authorId: comments.authorId })
       .from(comments)
       .where(eq(comments.id, parentId))
       .get();
     if (!parent || parent.postId !== postId) {
       throw errors.validation("parentId must reference a comment on this post");
     }
+    recipientId = parent.authorId;
   }
 
   const id = newId();
@@ -218,6 +224,15 @@ export async function createComment(
       .set({ commentCount: sql`${posts.commentCount} + 1` })
       .where(eq(posts.id, postId))
       .run();
+  });
+
+  // Self-comments drop inside createNotification (recipient === actor).
+  createNotification({
+    userId: recipientId,
+    actorId: authorId,
+    type: parentId ? "reply" : "comment",
+    entityType: "post",
+    entityId: postId,
   });
 
   const row = (await db.query.comments.findFirst({

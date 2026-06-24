@@ -58,6 +58,9 @@ export interface ListPostsParams {
   sort: Sort;
   tag?: string;
   author?: string;
+  // Restrict to a set of author ids — the feed passes the people you follow.
+  // An empty array would match nothing; callers guard that before calling.
+  authorIds?: string[];
   cursor?: string;
   dir: Direction;
   limit: number;
@@ -143,11 +146,14 @@ export const hydratePosts = async (ids: string[]): Promise<PublicPost[]> => {
 export async function listPosts(
   params: ListPostsParams,
 ): Promise<Envelope<PublicPost>> {
-  const { sort, tag, author, cursor, dir, limit } = params;
+  const { sort, tag, author, authorIds, cursor, dir, limit } = params;
   const cur = cursor ? decodeCursor(cursor) : null;
   const ranked = sort === "top" || sort === "trending";
 
   const conds = [];
+
+  // Feed filter: restrict to a fixed set of authors (the people you follow).
+  if (authorIds) conds.push(inArray(posts.authorId, authorIds));
 
   // Filters narrow the candidate set before sorting/paging.
   if (tag) {

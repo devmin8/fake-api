@@ -1,0 +1,28 @@
+meta {
+  name: Bob Likes Alice's Post
+  type: http
+  seq: 50
+}
+
+post {
+  url: {{baseUrl}}/api/posts/{{notifPostId}}/like
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // Act as bob so the like notifies alice (the post's author). A self-like would
+  // notify no one.
+  const access = bru.getEnvVar('secondAccessToken');
+  const csrf   = bru.getEnvVar('secondCsrfToken');
+  const parts = [];
+  if (access) parts.push(`access_token=${access}`);
+  if (csrf)   parts.push(`csrf_token=${csrf}`);
+  req.setHeader('Cookie', parts.join('; '));
+  if (csrf) req.setHeader('X-CSRF-Token', csrf);
+}
+
+assert {
+  res.status: eq 200
+  res.body.liked: eq true
+}

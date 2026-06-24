@@ -1,0 +1,22 @@
+meta {
+  name: Unfollow Bob
+  type: http
+  seq: 90
+}
+
+delete {
+  url: {{baseUrl}}/api/users/bob/follow
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.following: eq false
+  res.body.username: eq bob
+}
+
+docs {
+  alice unfollows bob — idempotent: returns following:false whether or not the
+  edge existed. bob's follow of alice is unaffected.
+}
