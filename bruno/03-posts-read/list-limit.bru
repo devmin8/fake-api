@@ -1,0 +1,21 @@
+meta {
+  name: List limit respected
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/api/posts?limit=3
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("limit caps the page size", function () {
+    expect(res.body.data.length).to.equal(3);
+  });
+}

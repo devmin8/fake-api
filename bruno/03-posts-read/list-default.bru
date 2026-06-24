@@ -1,0 +1,45 @@
+meta {
+  name: List default
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/posts?limit=5
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+  res.body.hasMore: isDefined
+  res.body.newestCursor: isDefined
+  res.body.oldestCursor: isDefined
+}
+
+script:post-response {
+  // Capture real boundary cursors + a real post id for the chained reads below.
+  // Never hardcode ids — the seed's ULIDs change shape if the data ever shifts.
+  bru.setEnvVar('oldestCursor', res.body.oldestCursor);
+  bru.setEnvVar('newestCursor', res.body.newestCursor);
+  bru.setEnvVar('postId', res.body.data[0].id);
+  // Stash this page's ids so the older-backfill request can prove no overlap.
+  bru.setEnvVar('page1Ids', JSON.stringify(res.body.data.map(p => p.id)));
+  // Real filter values pulled from live data, never hardcoded.
+  bru.setEnvVar('filterAuthor', res.body.data[0].author.username);
+  bru.setEnvVar('filterTag', res.body.data[0].tags[0].slug);
+}
+
+tests {
+  test("envelope shape + newest-first order", function () {
+    const d = res.body.data;
+    expect(d.length).to.equal(5);
+    // Each post embeds its author card and tags.
+    expect(d[0]).to.have.property('author');
+    expect(d[0]).to.have.property('tags');
+    // Default sort=new is newest-first: ULIDs sort by time, so descending.
+    const ids = d.map(p => p.id);
+    expect(ids).to.deep.equal([...ids].sort().reverse());
+  });
+}

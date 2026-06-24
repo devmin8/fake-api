@@ -1,0 +1,23 @@
+meta {
+  name: Detail
+  type: http
+  seq: 80
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{postId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: eq {{postId}}
+  res.body.author: isDefined
+  res.body.tags: isArray
+}
+
+script:post-response {
+  // Remember this call's view count so the next request can assert the +1 bump.
+  bru.setEnvVar('viewCountBefore', String(res.body.viewCount));
+}

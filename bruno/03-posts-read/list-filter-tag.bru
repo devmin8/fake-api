@@ -1,0 +1,24 @@
+meta {
+  name: List filter by tag
+  type: http
+  seq: 60
+}
+
+get {
+  url: {{baseUrl}}/api/posts?tag={{filterTag}}&limit=50
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("every returned post carries the filter tag", function () {
+    const tag = bru.getEnvVar('filterTag');
+    expect(res.body.data.length).to.be.greaterThan(0);
+    const ok = res.body.data.every(p => p.tags.some(t => t.slug === tag));
+    expect(ok).to.equal(true);
+  });
+}

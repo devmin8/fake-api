@@ -1,0 +1,22 @@
+meta {
+  name: Detail view increment
+  type: http
+  seq: 90
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{postId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("view_count incremented by 1 since the previous detail call", function () {
+    const before = Number(bru.getEnvVar('viewCountBefore'));
+    expect(res.body.viewCount).to.equal(before + 1);
+  });
+}

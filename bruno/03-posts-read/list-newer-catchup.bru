@@ -1,0 +1,28 @@
+meta {
+  name: List newer catch-up
+  type: http
+  seq: 40
+}
+
+get {
+  url: {{baseUrl}}/api/posts?limit=3&dir=newer&cursor={{oldestCursor}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("catch-up returns strictly newer, adjacent-to-head first (ascending)", function () {
+    const ids = res.body.data.map(p => p.id);
+    expect(ids.length).to.be.greaterThan(0);
+    // Contract: ascending from the cursor (adjacent-to-head first).
+    expect(ids).to.deep.equal([...ids].sort());
+    // All strictly newer than the cursor anchor (page-1 oldest id).
+    const page1 = JSON.parse(bru.getEnvVar('page1Ids'));
+    const anchor = [...page1].sort()[0];
+    expect(ids.every(id => id > anchor)).to.equal(true);
+  });
+}

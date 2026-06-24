@@ -1,0 +1,22 @@
+meta {
+  name: List sort top
+  type: http
+  seq: 50
+}
+
+get {
+  url: {{baseUrl}}/api/posts?sort=top&limit=10
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("top orders by like_count descending", function () {
+    const likes = res.body.data.map(p => p.likeCount);
+    expect(likes).to.deep.equal([...likes].sort((a, b) => b - a));
+  });
+}

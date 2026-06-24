@@ -1,0 +1,24 @@
+meta {
+  name: List filter by author
+  type: http
+  seq: 70
+}
+
+get {
+  url: {{baseUrl}}/api/posts?author={{filterAuthor}}&limit=50
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("every returned post is by the filter author", function () {
+    const author = bru.getEnvVar('filterAuthor');
+    expect(res.body.data.length).to.be.greaterThan(0);
+    const ok = res.body.data.every(p => p.author.username === author);
+    expect(ok).to.equal(true);
+  });
+}

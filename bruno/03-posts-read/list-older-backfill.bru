@@ -1,0 +1,29 @@
+meta {
+  name: List older backfill
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrl}}/api/posts?limit=5&dir=older&cursor={{oldestCursor}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("backfill is strictly older, no gaps or dupes vs page 1", function () {
+    const page1 = JSON.parse(bru.getEnvVar('page1Ids'));
+    const page2 = res.body.data.map(p => p.id);
+    // No id appears on both pages.
+    const overlap = page2.filter(id => page1.includes(id));
+    expect(overlap).to.deep.equal([]);
+    // Every page-2 id sorts below the smallest page-1 id (strictly older).
+    const page1Min = [...page1].sort()[0];
+    expect(Math.max(...page2.map(id => id < page1Min ? 1 : 0))).to.equal(1);
+    expect(page2.every(id => id < page1Min)).to.equal(true);
+  });
+}

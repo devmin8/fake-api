@@ -1,0 +1,24 @@
+meta {
+  name: Updates head-check
+  type: http
+  seq: 110
+}
+
+get {
+  url: {{baseUrl}}/api/posts/updates?since={{oldestCursor}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.newestCursor: isDefined
+  res.body.previews: isArray
+}
+
+tests {
+  test("count equals the posts newer than the limit-5 page tail", function () {
+    // oldestCursor is the 5th-newest post, so exactly 4 posts are newer than it.
+    expect(res.body.count).to.equal(4);
+  });
+}
