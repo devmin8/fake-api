@@ -1,0 +1,26 @@
+meta {
+  name: List replies
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/api/comments/{{commentId}}/replies?limit=20
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+  res.body.hasMore: isDefined
+}
+
+tests {
+  test("replies are children of the parent comment", function () {
+    const parentId = bru.getEnvVar('commentId');
+    expect(parentId).to.be.a('string');
+    const d = res.body.data;
+    expect(d.every(c => c.parentId === parentId)).to.equal(true);
+  });
+}

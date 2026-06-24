@@ -1,0 +1,39 @@
+meta {
+  name: List comments
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{postId}}/comments?limit=50
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+  res.body.hasMore: isDefined
+  res.body.newestCursor: isDefined
+  res.body.oldestCursor: isDefined
+}
+
+script:post-response {
+  // Prefer a top-level comment that has replies so the next request has data.
+  const withReplies = res.body.data.find(c => c.replyCount > 0);
+  const pick = withReplies ?? res.body.data[0];
+  if (pick) bru.setEnvVar('commentId', pick.id);
+  if (res.body.oldestCursor) bru.setEnvVar('commentOldestCursor', res.body.oldestCursor);
+  bru.setEnvVar('commentPage1Ids', JSON.stringify(res.body.data.map(c => c.id)));
+}
+
+tests {
+  test("top-level only, threading fields present", function () {
+    const d = res.body.data;
+    expect(d.length).to.be.above(0);
+    expect(d.every(c => c.parentId === null)).to.equal(true);
+    expect(d[0]).to.have.property('author');
+    expect(d[0]).to.have.property('replyCount');
+    expect(d[0].postId).to.equal(bru.getEnvVar('postId'));
+  });
+}

@@ -10,6 +10,10 @@ import { runMigrations } from "~/db/migrate.ts";
 import { cors } from "~/plugins/cors.ts";
 import { ApiError, type ErrorEnvelope } from "~/lib/errors.ts";
 import { authRoutes } from "~/routes/auth.ts";
+import {
+  commentRoutes,
+  postCommentReadRoutes,
+} from "~/routes/comments.ts";
 import { postRoutes } from "~/routes/posts.ts";
 
 // Bring the schema up to date before serving — a fresh checkout boots straight
@@ -66,7 +70,8 @@ const app = new Elysia()
     detail: { summary: "Liveness probe", tags: ["meta"] },
   })
   .use(authRoutes)
-  .use(postRoutes)
+  .use(postRoutes.use(postCommentReadRoutes))
+  .use(commentRoutes)
   .listen(config.port);
 
 console.log(
