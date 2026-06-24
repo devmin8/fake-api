@@ -33,6 +33,13 @@ Never skip ahead to the next ticket. One ticket in, one log line out, then pause
   and real data must never diverge.
 - **Handoff notes go in the ticket**, only when there's something the next agent must know.
   `status.html` gets one log line (+ `[notes]` flag if you left any).
+- **Imports use the `~` alias for anything under `src/`.** `~` maps to `src/`
+  (set in `tsconfig.json` `paths`). Write `import { config } from "~/config.ts"`,
+  never relative hops like `../../config.ts`. Keep the `.ts` extension.
+- **Import order** — three groups, one blank line between each:
+  1. external library imports
+  2. alias imports (`~/...`)
+  3. same-folder imports (`./...`)
 - **Stop after each ticket and wait for approval.**
 
 ## Quick commands (once code exists)

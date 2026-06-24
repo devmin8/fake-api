@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "MockStack API",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"],
+  "scripts": {
+    "flow": "sandwich"
+  }
+}

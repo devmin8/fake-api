@@ -1,0 +1,18 @@
+script:pre-request {
+  // Re-inject auth on every request. The Bruno CLI does NOT auto-save 2xx
+  // Set-Cookie into its jar, so login captures the cookies into env vars and
+  // we replay them here. Harmless before task-004 wires auth: when these vars
+  // are unset the script no-ops.
+  const access  = bru.getEnvVar('accessToken');
+  const refresh = bru.getEnvVar('refreshToken');
+  const csrf    = bru.getEnvVar('csrfToken');
+
+  const parts = [];
+  if (access)  parts.push(`access_token=${access}`);
+  if (refresh) parts.push(`refresh_token=${refresh}`);
+  if (csrf)    parts.push(`csrf_token=${csrf}`);
+  if (parts.length) req.setHeader('Cookie', parts.join('; '));
+
+  // Double-submit CSRF header for mutating requests.
+  if (csrf) req.setHeader('X-CSRF-Token', csrf);
+}

@@ -1,0 +1,7 @@
+node_modules/
+.env
+data/
+bruno/out/
+*.db
+*.db-shm
+*.db-wal
