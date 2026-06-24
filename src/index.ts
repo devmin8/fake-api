@@ -6,8 +6,13 @@ import { Elysia } from "elysia";
 import { swagger } from "@elysiajs/swagger";
 
 import { config } from "~/config.ts";
+import { runMigrations } from "~/db/migrate.ts";
 import { cors } from "~/plugins/cors.ts";
 import { ApiError, type ErrorEnvelope } from "~/lib/errors.ts";
+
+// Bring the schema up to date before serving — a fresh checkout boots straight
+// into a fully-tabled ./data/app.db with no manual migrate step.
+runMigrations();
 
 const app = new Elysia()
   .use(cors)
