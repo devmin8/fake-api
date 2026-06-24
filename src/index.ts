@@ -9,6 +9,7 @@ import { config } from "~/config.ts";
 import { runMigrations } from "~/db/migrate.ts";
 import { cors } from "~/plugins/cors.ts";
 import { ApiError, type ErrorEnvelope } from "~/lib/errors.ts";
+import { authRoutes } from "~/routes/auth.ts";
 
 // Bring the schema up to date before serving — a fresh checkout boots straight
 // into a fully-tabled ./data/app.db with no manual migrate step.
@@ -63,6 +64,7 @@ const app = new Elysia()
   .get("/health", () => ({ status: "ok" }), {
     detail: { summary: "Liveness probe", tags: ["meta"] },
   })
+  .use(authRoutes)
   .listen(config.port);
 
 console.log(

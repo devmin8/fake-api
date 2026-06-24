@@ -1,3 +1,18 @@
+docs {
+  # Auth & run ordering (task-004)
+
+  - Login captures the session cookies into env vars; the pre-request below
+    replays them (cookie + X-CSRF-Token) on every request, so individual
+    requests just assume they're logged in.
+  - Logout lives in its own trailing `99-teardown/` folder, NOT in `02-auth`.
+    Folders run alphabetically, so keeping logout last means the write folders
+    (03-, 04-, …) still have a live session when they run; `02-auth` only does
+    a non-destructive CSRF-reject check against logout.
+  - The suite expects the API running with its default `CSRF_ENABLED=true`
+    (e.g. `bun run dev`). `02-auth/csrf-reject` asserts a 403 when the
+    X-CSRF-Token doesn't match, which only holds with CSRF on.
+}
+
 script:pre-request {
   // Re-inject auth on every request. The Bruno CLI does NOT auto-save 2xx
   // Set-Cookie into its jar, so login captures the cookies into env vars and

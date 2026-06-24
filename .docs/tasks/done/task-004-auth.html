@@ -78,6 +78,41 @@
     <code>accessToken</code> is unset. Pick one and note it in <code>collection.bru</code>.</div>
   </section>
 
+  <section>
+    <div class="sec-head"><span class="sec-num">✓</span><h2>Handoff notes</h2></div>
+    <ul>
+      <li><strong>Dependency added:</strong> <code>@elysiajs/jwt</code>. Configured once in
+      <code>src/lib/auth.ts</code> as <code>jwtAccess</code> (name <code>jwt</code>, <code>exp</code>
+      = access TTL); both the guard and the routes <code>.use()</code> that single instance.</li>
+      <li><strong>The guard is the reuse surface for every later authed route.</strong>
+      <code>.use(authGuard)</code> then add <code>{ auth: true }</code> to a route → 401 if no
+      session. The guard <code>derive</code>s a nullable <code>user</code> on <em>every</em>
+      request in scope (so public reads can also tell if someone's logged in). For ownership
+      checks (task-008+), call the decorated <code>owner(ownerId, user.id)</code> or import
+      <code>assertOwner</code> — both 403 on mismatch.</li>
+      <li><strong>CSRF is enforced only inside <code>.auth()</code></strong> (authenticated
+      mutating requests). Public POSTs (register/login/refresh) are intentionally exempt — the
+      client has no csrf cookie yet. Keep write routes behind <code>{ auth: true }</code> and CSRF
+      comes for free.</li>
+      <li><strong>logout revokes <em>all</em> the caller's refresh tokens by user id</strong>,
+      not the presented one: the refresh cookie is <code>Path=/api/auth/refresh</code> and never
+      reaches <code>/api/auth/logout</code>. The refresh cookie path matches the route so it does
+      attach on refresh.</li>
+      <li><strong>Bruno gotcha for unauthenticated-boundary tests:</strong> the collection
+      pre-request injects the captured cookie on every request, and a request-level
+      pre-request does <em>not</em> reliably override it. So <code>me-unauthed</code> runs at
+      <code>seq 5</code> — <em>before</em> login — when no session exists yet. Any future folder
+      needing a "no session → 401" case should do the same (run it before login, or in a folder
+      that runs before <code>02-auth</code>). <code>99-teardown/logout</code> nulls the captured
+      vars so re-runs start clean.</li>
+      <li><strong>Block keyword is <code>tests</code></strong> in <code>.bru</code> files (the
+      plan's prose says <code>script:tests</code>, but the parser wants <code>tests</code>).</li>
+      <li>Suite expects the API on its default <code>CSRF_ENABLED=true</code>; for plain-http
+      local runs set <code>COOKIE_SECURE=false</code> so a browser will store the cookies (the
+      <code>bru</code> CLI reads Set-Cookie directly, so it's green either way).</li>
+    </ul>
+  </section>
+
   <footer>fake-api · task-004 · build order milestone 3 (Auth)</footer>
 </div>
 </body>

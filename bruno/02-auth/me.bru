@@ -1,0 +1,17 @@
+meta {
+  name: Me
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrl}}/api/auth/me
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.email: eq alice@example.com
+  res.body.id: isDefined
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Logout
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/auth/logout
+  body: none
+  auth: none
+}
+
+script:post-response {
+  // Session is gone server-side; drop the captured vars so a fresh run starts
+  // clean. Lives in its own trailing folder so it can't wipe auth before the
+  // write folders (which run alphabetically, before 99-) need a session.
+  bru.setEnvVar('accessToken', null);
+  bru.setEnvVar('refreshToken', null);
+  bru.setEnvVar('csrfToken', null);
+}
+
+assert {
+  res.status: eq 200
+  res.body.ok: eq true
+}

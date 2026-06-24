@@ -1,0 +1,24 @@
+meta {
+  name: CSRF Reject
+  type: http
+  seq: 80
+}
+
+post {
+  url: {{baseUrl}}/api/auth/logout
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // The collection injected the matching X-CSRF-Token; clobber it with a wrong
+  // value. The double-submit check runs in the auth guard's beforeHandle, so the
+  // request is rejected BEFORE logout revokes anything — the session survives for
+  // the real logout in 99-teardown. Assumes the API runs with CSRF_ENABLED=true.
+  req.setHeader('X-CSRF-Token', 'wrong-token');
+}
+
+assert {
+  res.status: eq 403
+  res.body.error.code: eq FORBIDDEN
+}

@@ -1,0 +1,28 @@
+meta {
+  name: Register
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "alice",
+    "email": "{{testEmail}}",
+    "password": "{{testPassword}}",
+    "displayName": "Alice"
+  }
+}
+
+tests {
+  // The seed already created alice, so a normal run gets 409. On a fresh,
+  // unseeded DB this call creates her instead (201). Tolerate either.
+  test("register: created (201) or already exists (409)", function () {
+    expect(res.getStatus()).to.be.oneOf([201, 409]);
+  });
+}
