@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MockStack — Backend Design Spec</title>
+<style>
+  :root{
+    --ink:#11131a;
+    --ink-soft:#3a3f4b;
+    --paper:#fbfbf9;
+    --line:#e3e2db;
+    --line-strong:#cdccc2;
+    --accent:#1d4ed8;        /* signal blue */
+    --accent-soft:#eef2ff;
+    --warn:#b45309;
+    --ok:#15803d;
+    --mute:#6b7280;
+    --code-bg:#0f1117;
+    --code-ink:#e6e7ea;
+    --code-dim:#8b93a7;
+    --code-key:#7dd3fc;
+    --code-str:#a7f3d0;
+    --code-com:#6b7280;
+    --pub:#15803d;
+    --auth:#b91c1c;
+    --radius:7px;
+    --maxw:920px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(transparent 31px, rgba(120,120,120,.04) 32px) 0 0/100% 32px,
+      var(--paper);
+    color:var(--ink);
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;
+    line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:64px 28px 120px;}
+  code,pre,.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+
+  /* Masthead */
+  .masthead{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:8px;}
+  .eyebrow{font-family:ui-monospace,monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;}
+  h1{font-size:clamp(34px,6vw,52px);line-height:1.02;letter-spacing:-.02em;margin:14px 0 6px;font-weight:800;}
+  h1 .thin{font-weight:300;color:var(--ink-soft);}
+  .tagline{font-size:18px;color:var(--ink-soft);max-width:62ch;margin:0;}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:20px;}
+  .chip{font-family:ui-monospace,monospace;font-size:12.5px;padding:4px 10px;border:1px solid var(--line-strong);border-radius:100px;background:#fff;color:var(--ink-soft);}
+  .chip b{color:var(--ink);font-weight:600;}
+
+  /* TOC */
+  .toc{margin:30px 0 8px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:16px 20px;}
+  .toc h4{margin:0 0 10px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);font-family:ui-monospace,monospace;font-weight:600;}
+  .toc ol{margin:0;padding:0;list-style:none;columns:2;column-gap:32px;}
+  .toc li{font-size:14.5px;padding:2px 0;break-inside:avoid;}
+  .toc a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid transparent;}
+  .toc a:hover{color:var(--accent);border-color:var(--accent);}
+  .toc .num{font-family:ui-monospace,monospace;color:var(--mute);font-size:12px;margin-right:8px;}
+
+  /* Sections */
+  section{margin-top:54px;scroll-margin-top:24px;}
+  .sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line-strong);padding-bottom:10px;margin-bottom:20px;}
+  .sec-num{font-family:ui-monospace,monospace;font-size:13px;color:var(--accent);font-weight:600;letter-spacing:.05em;}
+  h2{font-size:25px;letter-spacing:-.01em;margin:0;font-weight:700;}
+  h3{font-size:17px;margin:30px 0 8px;font-weight:650;letter-spacing:-.005em;}
+  h3 .mono{font-size:15px;color:var(--accent);}
+  p{margin:0 0 14px;}
+  p.lead{color:var(--ink-soft);}
+  ul,ol.spaced{margin:0 0 14px;padding-left:22px;}
+  li{margin:5px 0;}
+  strong{font-weight:650;}
+  .muted{color:var(--mute);}
+
+  /* Callouts */
+  .note{border-left:3px solid var(--accent);background:var(--accent-soft);padding:12px 16px;border-radius:0 var(--radius) var(--radius) 0;margin:16px 0;font-size:14.5px;}
+  .note.warn{border-color:var(--warn);background:#fff7ed;}
+  .note .lbl{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);display:block;margin-bottom:3px;}
+
+  /* Code */
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:var(--radius);padding:16px 18px;overflow:auto;font-size:13px;line-height:1.65;margin:14px 0;border:1px solid #1e2230;}
+  pre .c{color:var(--code-com);}
+  pre .k{color:var(--code-key);}
+  pre .s{color:var(--code-str);}
+  p code,li code,td code{background:#f1f1ec;border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:13px;color:#0b3ea8;white-space:nowrap;}
+
+  /* Tables */
+  .tbl-wrap{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:var(--radius);}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;}
+  th{text-align:left;background:#f6f6f1;font-weight:600;font-family:ui-monospace,monospace;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);padding:9px 14px;border-bottom:1px solid var(--line-strong);}
+  td{padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  td.mono,th.mono{font-family:ui-monospace,monospace;}
+  td .method{font-family:ui-monospace,monospace;font-weight:700;font-size:12px;}
+  .m-get{color:#15803d;}
+  .m-post{color:#1d4ed8;}
+  .m-patch{color:#b45309;}
+  .m-del{color:#b91c1c;}
+  .badge{display:inline-block;font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.05em;padding:2px 7px;border-radius:100px;font-weight:600;}
+  .b-pub{background:#dcfce7;color:var(--pub);}
+  .b-auth{background:#fee2e2;color:var(--auth);}
+  .b-owner{background:#fef3c7;color:#92400e;}
+
+  /* ERD */
+  .erd{background:var(--code-bg);color:var(--code-dim);border-radius:var(--radius);padding:20px;overflow-x:auto;font-family:ui-monospace,monospace;font-size:12.5px;line-height:1.5;white-space:pre;border:1px solid #1e2230;}
+  .erd b{color:var(--code-key);font-weight:600;}
+
+  footer{margin-top:80px;padding-top:20px;border-top:1px solid var(--line-strong);font-size:13px;color:var(--mute);font-family:ui-monospace,monospace;}
+  a{color:var(--accent);}
+  @media(max-width:640px){.toc ol{columns:1;}.wrap{padding:40px 20px 90px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backend Design Spec · v1 · Build-ready handoff</div>
+    <h1>MockStack <span class="thin">API</span></h1>
+    <p class="tagline">A self-hosted, fully relational, real-time mock backend — a permanent practice ground for building any frontend against real auth, real data, and a live event stream.</p>
+    <div class="chips">
+      <span class="chip"><b>Runtime</b> Bun</span>
+      <span class="chip"><b>Framework</b> Elysia</span>
+      <span class="chip"><b>ORM</b> Drizzle</span>
+      <span class="chip"><b>DB</b> SQLite (bun:sqlite)</span>
+      <span class="chip"><b>Realtime</b> native WS</span>
+      <span class="chip"><b>Auth</b> cookie JWT + refresh</span>
+      <span class="chip"><b>Domains</b> Portless · HTTPS</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <h4>Contents</h4>
+    <ol>
+      <li><a href="#goal"><span class="num">01</span>Goal &amp; non-goals</a></li>
+      <li><a href="#arch"><span class="num">02</span>Architecture at a glance</a></li>
+      <li><a href="#stack"><span class="num">03</span>Tech stack</a></li>
+      <li><a href="#model"><span class="num">04</span>Data model</a></li>
+      <li><a href="#auth"><span class="num">05</span>Auth &amp; sessions</a></li>
+      <li><a href="#rest"><span class="num">06</span>REST API surface</a></li>
+      <li><a href="#conv"><span class="num">07</span>Conventions</a></li>
+      <li><a href="#realtime"><span class="num">08</span>Realtime / WebSocket</a></li>
+      <li><a href="#sim"><span class="num">09</span>Firehose simulator</a></li>
+      <li><a href="#media"><span class="num">10</span>Media uploads</a></li>
+      <li><a href="#structure"><span class="num">11</span>Project structure</a></li>
+      <li><a href="#config"><span class="num">12</span>Config &amp; env</a></li>
+      <li><a href="#dev"><span class="num">13</span>Local dev (Portless)</a></li>
+      <li><a href="#build"><span class="num">14</span>Build order</a></li>
+    </ol>
+  </nav>
+
+  <!-- 01 -->
+  <section id="goal">
+    <div class="sec-head"><span class="sec-num">01</span><h2>Goal &amp; non-goals</h2></div>
+    <p class="lead">One backend you spin up once and point any frontend project at. It behaves like a real product API — sign-in, ownership, relational reads, live updates — so the frontend you build against it can be as complex as the real thing. The differentiator over JSONPlaceholder &amp; friends: <strong>it actually accepts writes, enforces auth, models relationships, and streams a live feed over WebSockets.</strong></p>
+    <h3>In scope</h3>
+    <ul>
+      <li>A social/Q&amp;A feed domain (StackOverflow × Twitter): users, posts with optional images, threaded comments, likes, tags, follows, bookmarks, notifications.</li>
+      <li>Real auth with a public/authenticated route split that mirrors StackOverflow — browse &amp; subscribe freely; write only when signed in.</li>
+      <li>Cursor-paginated, filterable, sortable reads over genuinely relational data.</li>
+      <li>WebSocket topics for live counts, new posts, comments, and per-user notifications.</li>
+      <li>A toggleable <strong>firehose simulator</strong> — bot users that post/comment/like on an interval and broadcast events, so the feed visibly streams with no second client.</li>
+    </ul>
+    <h3>Non-goals</h3>
+    <ul>
+      <li>Not production-hardened. No multi-tenant, no horizontal scaling, no rate-limit infra beyond a courtesy limiter. Single-process is fine.</li>
+      <li>No email/SMS delivery, no OAuth providers (local credential auth only).</li>
+      <li>Not a teaching example of microservices — deliberately one modular monolith.</li>
+      <li><strong>Backend-only repository.</strong> Any frontend behaviour described elsewhere (e.g. the companion feed guide covering the new-posts banner and client cursor handling) is learning reference for the human only — it is <em>not</em> to be implemented in this project. This repo ships an API; it has no UI.</li>
+    </ul>
+  </section>
+
+  <!-- 02 -->
+  <section id="arch">
+    <div class="sec-head"><span class="sec-num">02</span><h2>Architecture at a glance</h2></div>
+    <div class="erd">  Browser (frontend project)            <b>https://app.social.localhost</b>
+        │  fetch(credentials:"include")        │  new WebSocket(...)
+        ▼                                       ▼
+  ┌──────────────────────────────────────────────────────────┐
+  │  Portless reverse proxy · local CA · HTTP/2 · TLS         │
+  └──────────────────────────────────────────────────────────┘
+        │                                       │
+        ▼   <b>https://api.social.localhost</b>     ▼  <b>wss://api.social.localhost/ws</b>
+  ┌──────────────────────────────────────────────────────────┐
+  │  Elysia app (single Bun process)                          │
+  │                                                          │
+  │  CORS ─ cookie/JWT guard ─ CSRF ─ validation (t)          │
+  │     │                                                    │
+  │     ├── REST routes ───────────────┐                     │
+  │     ├── WS hub (topics/broadcast) ◄┤ emits events        │
+  │     └── Firehose simulator ────────┘ (timer → writes)    │
+  │                  │                                        │
+  │                  ▼                                        │
+  │            Drizzle ORM                                    │
+  └──────────────────┬───────────────────────────────────────┘
+                     ▼
+              bun:sqlite  ──►  ./data/app.db</div>
+    <p class="muted" style="font-size:14px;">Same-site origins (<code>app.</code> and <code>api.</code> under one parent) so <code>SameSite=Lax</code> cookies attach on fetch while CORS stays locked to the one frontend origin. Writes go through the same guard whether they come from a real client or the simulator, so simulated data is indistinguishable from real data.</p>
+  </section>
+
+  <!-- 03 -->
+  <section id="stack">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Tech stack</h2></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Concern</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Runtime</td><td class="mono">Bun</td><td>Native TS, fast installs, built-in test runner &amp; SQLite, native WebSockets.</td></tr>
+        <tr><td>HTTP framework</td><td class="mono">Elysia</td><td>Bun-native; schema-first validation &amp; types from one source; first-class <code>.ws()</code>.</td></tr>
+        <tr><td>ORM / migrations</td><td class="mono">Drizzle</td><td>Typed relational queries, SQL-close, lightweight migrations via <code>drizzle-kit</code>.</td></tr>
+        <tr><td>Database</td><td class="mono">bun:sqlite</td><td>Zero-setup, file-backed, real FKs &amp; transactions. One-line swap to Postgres later.</td></tr>
+        <tr><td>Password hashing</td><td class="mono">Bun.password</td><td>argon2id built into Bun — no bcrypt dependency.</td></tr>
+        <tr><td>Tokens</td><td class="mono">@elysiajs/jwt</td><td>Signs the short-lived access token; refresh tokens are opaque + stored hashed.</td></tr>
+        <tr><td>Validation</td><td class="mono">Elysia <code>t</code></td><td>TypeBox schemas double as runtime guards, TS types, and OpenAPI.</td></tr>
+        <tr><td>API docs</td><td class="mono">@elysiajs/swagger</td><td>Auto-generated OpenAPI/Swagger UI at <code>/docs</code> — free reference while building the frontend.</td></tr>
+        <tr><td>Seed data</td><td class="mono">@faker-js/faker</td><td>Believable users, posts, comments, avatars on first run.</td></tr>
+        <tr><td>Dev domains</td><td class="mono">Portless</td><td>Stable named HTTPS URLs; makes <code>Secure</code> cookies + fixed CORS origin work locally.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- 04 -->
+  <section id="model">
+    <div class="sec-head"><span class="sec-num">04</span><h2>Data model</h2></div>
+    <p>IDs are <strong>ULIDs</strong> (time-sortable — they double as pagination cursors). All timestamps are ISO-8601 UTC. Counts on <code>posts</code> / <code>comments</code> are <strong>denormalized</strong> and updated in the same transaction as the action that changes them, so live count broadcasts are cheap and reads never aggregate.</p>
+    <div class="erd"><b>users</b>            <b>posts</b>                <b>comments</b>
+  id PK            id PK                  id PK
+  username UQ      author_id ─► users.id  post_id ─► posts.id
+  email UQ         title                  author_id ─► users.id
+  password_hash    body                   parent_id ─► comments.id  (nullable, threaded)
+  display_name     image_url? (nullable)  body
+  avatar_url       like_count             like_count
+  bio              comment_count          created_at
+  is_bot           view_count
+  created_at       created_at
+  updated_at       updated_at
+
+<b>likes</b>  (polymorphic)        <b>follows</b>              <b>bookmarks</b>
+  id PK                       follower_id ─► users   user_id ─► users
+  user_id ─► users.id         followee_id ─► users   post_id ─► posts
+  target_type (post|comment)  created_at             created_at
+  target_id                   PK(follower,followee)  PK(user,post)
+  created_at
+  UQ(user_id,target_type,target_id)
+
+<b>tags</b>          <b>post_tags</b>            <b>notifications</b>           <b>refresh_tokens</b>
+  id PK          post_id ─► posts       id PK                     id PK
+  name UQ        tag_id  ─► tags        user_id ─► users (recip)  user_id ─► users
+  slug UQ        PK(post,tag)           type                      token_hash
+                                        actor_id ─► users         expires_at
+<b>media</b>                                entity_type/entity_id     revoked
+  id PK · owner_id ─► users               is_read                   created_at
+  filename · mime · url · created_at      created_at</div>
+
+    <h3>Relationship notes</h3>
+    <ul>
+      <li><strong>Posts ↔ Comments</strong> 1:N; comments self-reference via <code>parent_id</code> for one-level (or deep) threads.</li>
+      <li><strong>Likes</strong> are polymorphic over posts and comments via <code>(target_type, target_id)</code> with a uniqueness guard so a user can't double-like.</li>
+      <li><strong>Tags</strong> are M:N through <code>post_tags</code>.</li>
+      <li><strong>Follows</strong> drive the personalized <code>/feed</code>; <strong>notifications</strong> are written whenever someone likes/comments/follows you (real users <em>and</em> bots).</li>
+      <li>FKs use <code>ON DELETE CASCADE</code> where a child can't outlive its parent (comments, likes, post_tags).</li>
+    </ul>
+  </section>
+
+  <!-- 05 -->
+  <section id="auth">
+    <div class="sec-head"><span class="sec-num">05</span><h2>Auth &amp; sessions</h2></div>
+    <p>Cookie-based, server-set, never readable by JS. JWT is only the access-token <em>format</em>; storage is httpOnly cookies, so XSS can't exfiltrate a session.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Cookie</th><th>Contents</th><th>Flags</th><th>TTL</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">access_token</td><td>JWT, payload <code>{ sub: userId }</code></td><td class="mono">httpOnly · Secure · SameSite=Lax · Path=/</td><td>~15 min</td></tr>
+        <tr><td class="mono">refresh_token</td><td>opaque random; stored hashed in <code>refresh_tokens</code></td><td class="mono">httpOnly · Secure · SameSite=Lax · Path=/auth/refresh</td><td>~7 days</td></tr>
+        <tr><td class="mono">csrf_token</td><td>random; <em>readable</em> by JS (double-submit)</td><td class="mono">Secure · SameSite=Lax</td><td>session</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Flow</h3>
+    <ol class="spaced">
+      <li><code>POST /auth/register</code> or <code>/auth/login</code> → verify with <code>Bun.password</code> → set all three cookies, return the user object.</li>
+      <li>Every request: guard reads <code>access_token</code>, verifies JWT, attaches <code>user</code> to context. Missing/expired → <code>401</code>.</li>
+      <li><code>POST /auth/refresh</code> (only endpoint the refresh cookie is sent to): validate against stored hash, <strong>rotate</strong> (issue new refresh, revoke old), re-issue access.</li>
+      <li><code>POST /auth/logout</code>: revoke refresh row, clear all cookies.</li>
+    </ol>
+
+    <div class="note">
+      <span class="lbl">CSRF</span>
+      Double-submit: client reads <code>csrf_token</code> cookie and echoes it in an <code>X-CSRF-Token</code> header on every <span class="mono">POST/PATCH/DELETE</span>; server compares. Gated behind <code>CSRF_ENABLED</code> so it can be switched off while you're focused on learning a frontend, on when you want to practice the full handshake.
+    </div>
+    <div class="note warn">
+      <span class="lbl">Cross-origin in dev</span>
+      Frontend (<code>app.social.localhost</code>) and API (<code>api.social.localhost</code>) are <strong>same-site, different-origin</strong>. CORS must echo the exact origin (never <code>*</code>) with <code>Access-Control-Allow-Credentials: true</code>; the frontend must send <code>credentials:"include"</code>. Because they share the parent domain, <code>SameSite=Lax</code> cookies still attach — no need to weaken to <code>None</code>.
+    </div>
+
+    <h3>Public vs authenticated</h3>
+    <p>Reading anything — feed, post detail, comments, profiles, tags — and <strong>subscribing to live counts</strong> is fully public, exactly like browsing StackOverflow signed-out. Creating, editing, liking, commenting, following, bookmarking, and reading your notifications require a session. Ownership-bound mutations (edit/delete) additionally check the row belongs to the caller.</p>
+  </section>
+
+  <!-- 06 -->
+  <section id="rest">
+    <div class="sec-head"><span class="sec-num">06</span><h2>REST API surface</h2></div>
+    <p><span class="badge b-pub">PUBLIC</span> no auth · <span class="badge b-auth">AUTH</span> session required · <span class="badge b-owner">OWNER</span> must own the row. Base path <code>/api</code>.</p>
+
+    <h3>Auth <span class="mono">/auth</span></h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Method</th><th>Path</th><th>Access</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/auth/register</td><td><span class="badge b-pub">PUBLIC</span></td><td>Create account, start session.</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/auth/login</td><td><span class="badge b-pub">PUBLIC</span></td><td>Start session.</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/auth/refresh</td><td><span class="badge b-pub">PUBLIC</span></td><td>Rotate &amp; re-issue tokens via refresh cookie.</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/auth/logout</td><td><span class="badge b-auth">AUTH</span></td><td>Revoke refresh, clear cookies.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/auth/me</td><td><span class="badge b-auth">AUTH</span></td><td>Current user.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Posts <span class="mono">/posts</span></h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Method</th><th>Path</th><th>Access</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/posts</td><td><span class="badge b-pub">PUBLIC</span></td><td>Paginated list. <code>?sort=new|top|trending</code>, <code>?tag=</code>, <code>?author=</code>, <code>?cursor=</code>, <code>?dir=older|newer</code>, <code>?limit=</code>.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/posts/updates</td><td><span class="badge b-pub">PUBLIC</span></td><td>Head-check. <code>?since=&lt;cursor&gt;</code> → <code>{ count, newestCursor, previews? }</code>. Cheap "how many newer" for the new-posts banner.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/posts/:id</td><td><span class="badge b-pub">PUBLIC</span></td><td>Detail. Increments <code>view_count</code> &amp; broadcasts <code>post.viewed</code>.</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/posts</td><td><span class="badge b-auth">AUTH</span></td><td>Create (title, body, optional image, tags). Broadcasts <code>post.created</code>.</td></tr>
+        <tr><td><span class="method m-patch">PATCH</span></td><td class="mono">/posts/:id</td><td><span class="badge b-owner">OWNER</span></td><td>Edit.</td></tr>
+        <tr><td><span class="method m-del">DELETE</span></td><td class="mono">/posts/:id</td><td><span class="badge b-owner">OWNER</span></td><td>Delete (cascades).</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/posts/:id/like</td><td><span class="badge b-auth">AUTH</span></td><td>Like. Broadcasts <code>post.liked</code> + new count.</td></tr>
+        <tr><td><span class="method m-del">DELETE</span></td><td class="mono">/posts/:id/like</td><td><span class="badge b-auth">AUTH</span></td><td>Unlike. Broadcasts <code>post.unliked</code>.</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/posts/:id/bookmark</td><td><span class="badge b-auth">AUTH</span></td><td>Bookmark / un-bookmark (<span class="mono">DELETE</span> too).</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/posts/:id/comments</td><td><span class="badge b-pub">PUBLIC</span></td><td>Comments for a post (paginated, threaded).</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/posts/:id/comments</td><td><span class="badge b-auth">AUTH</span></td><td>Add comment. Broadcasts <code>comment.created</code> + count.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Feed, Comments, Users, Tags, Bookmarks, Notifications</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Method</th><th>Path</th><th>Access</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/feed</td><td><span class="badge b-auth">AUTH</span></td><td>Posts from people you follow (cursor paginated).</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/comments/:id/replies</td><td><span class="badge b-pub">PUBLIC</span></td><td>Thread under a comment.</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/comments/:id/like</td><td><span class="badge b-auth">AUTH</span></td><td>Like a comment (<span class="mono">DELETE</span> to unlike).</td></tr>
+        <tr><td><span class="method m-del">DELETE</span></td><td class="mono">/comments/:id</td><td><span class="badge b-owner">OWNER</span></td><td>Delete own comment.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/users/:username</td><td><span class="badge b-pub">PUBLIC</span></td><td>Profile + counts.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/users/:username/posts</td><td><span class="badge b-pub">PUBLIC</span></td><td>A user's posts.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/users/:username/followers</td><td><span class="badge b-pub">PUBLIC</span></td><td>Followers / following (<code>/following</code> too).</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/users/:username/follow</td><td><span class="badge b-auth">AUTH</span></td><td>Follow / unfollow (<span class="mono">DELETE</span>). Writes a notification.</td></tr>
+        <tr><td><span class="method m-patch">PATCH</span></td><td class="mono">/users/me</td><td><span class="badge b-auth">AUTH</span></td><td>Update own profile (display name, bio, avatar).</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/tags</td><td><span class="badge b-pub">PUBLIC</span></td><td>All tags with post counts.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/tags/:slug/posts</td><td><span class="badge b-pub">PUBLIC</span></td><td>Posts in a tag.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/bookmarks</td><td><span class="badge b-auth">AUTH</span></td><td>Your bookmarked posts.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/notifications</td><td><span class="badge b-auth">AUTH</span></td><td>Your notifications (<code>?unread=true</code>).</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/notifications/:id/read</td><td><span class="badge b-auth">AUTH</span></td><td>Mark read (<code>/read-all</code> for all).</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Media &amp; Simulator &amp; Health</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Method</th><th>Path</th><th>Access</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/media</td><td><span class="badge b-auth">AUTH</span></td><td>Multipart upload → returns <code>{ url }</code>.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/media/:file</td><td><span class="badge b-pub">PUBLIC</span></td><td>Serve uploaded file.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/sim/status</td><td><span class="badge b-pub">PUBLIC</span></td><td>Simulator running state + config.</td></tr>
+        <tr><td><span class="method m-post">POST</span></td><td class="mono">/sim/start · /sim/stop</td><td><span class="badge b-pub">PUBLIC</span></td><td>Toggle the firehose (dev tool).</td></tr>
+        <tr><td><span class="method m-patch">PATCH</span></td><td class="mono">/sim/config</td><td><span class="badge b-pub">PUBLIC</span></td><td>Tune interval / actions-per-tick / weights.</td></tr>
+        <tr><td><span class="method m-get">GET</span></td><td class="mono">/health</td><td><span class="badge b-pub">PUBLIC</span></td><td>Liveness.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="font-size:14px;"><code>/sim/*</code> is intentionally unauthenticated since it's a local learning lever — gate it behind <code>SIM_CONTROL_ENABLED</code> if you'd rather lock it.</p>
+  </section>
+
+  <!-- 07 -->
+  <section id="conv">
+    <div class="sec-head"><span class="sec-num">07</span><h2>Conventions</h2></div>
+    <h3>Pagination — directional cursor (two anchors)</h3>
+    <p>All lists take <code>?limit</code> (default 20, max 100), <code>?cursor</code>, and <code>?dir=older|newer</code> (default <code>older</code>). A cursor is an opaque base64 of <code>created_at|id</code>. Because ULIDs sort by time, a cursor is a stable boundary: inserts at the head can never shift what <em>"older than X"</em> means. This is the single property that lets a live feed paginate without gaps or dupes.</p>
+    <p>The two directions are independent and exist so a client can hold <strong>two anchors</strong> — the newest item it has (<code>head</code>) and the oldest (<code>tail</code>):</p>
+    <ul>
+      <li><code>dir=older&amp;cursor=&lt;tail&gt;</code> — backfill (infinite scroll). Returns items strictly older than the tail, newest-first.</li>
+      <li><code>dir=newer&amp;cursor=&lt;head&gt;</code> — catch-up. Returns items strictly newer than the head. <strong>Critical contract:</strong> order these <em>adjacent-to-head first</em> (ascending from the cursor) so the page always butts directly against what the client already holds. If more exist than <code>limit</code>, the leftover overflow stays above the returned page (toward <em>now</em>) — never stranded in the middle.</li>
+    </ul>
+    <p>So both edges are anchored to a row the client already owns; contiguity is structural, not best-effort. Fetching "the latest N" instead (absolute, unanchored) is what opens gaps — the API deliberately keys off the caller's cursor instead.</p>
+<pre><span class="c">// collection response envelope — both boundary cursors returned</span>
+{
+  <span class="k">"data"</span>:        [ ... ],
+  <span class="k">"newestCursor"</span>: <span class="s">"01J…"</span>,        <span class="c">// head of this page</span>
+  <span class="k">"oldestCursor"</span>: <span class="s">"01J…"</span>,        <span class="c">// tail of this page</span>
+  <span class="k">"hasMore"</span>:     <span class="k">true</span>          <span class="c">// more in the requested direction</span>
+}</pre>
+    <div class="note">
+      <span class="lbl">Large-gap escape hatch</span>
+      <code>/posts/updates?since=&lt;head&gt;</code> returns the count of newer items. The client decides what to do with it; the server just reports the number. If a client requests <code>dir=newer</code> and <code>hasMore</code> stays true across pages, that's the signal a huge backlog accrued (long absence) — the client may prefer a fresh top-of-feed load over stitching. Both are plain list calls; no special endpoint needed.
+    </div>
+    <h3>Sorting</h3>
+    <p><code>new</code> (created_at desc · default) · <code>top</code> (like_count desc) · <code>trending</code> (likes &amp; comments weighted, decayed by age). Directional cursors apply to <code>new</code> (chronological); <code>top</code>/<code>trending</code> are ranked, so they paginate older-only within a frozen ordering and don't take <code>dir=newer</code>.</p>
+    <h3>Errors — one envelope</h3>
+<pre>{
+  <span class="k">"error"</span>: {
+    <span class="k">"code"</span>: <span class="s">"VALIDATION_ERROR"</span>,
+    <span class="k">"message"</span>: <span class="s">"body must be at least 1 character"</span>,
+    <span class="k">"details"</span>: { <span class="k">"field"</span>: <span class="s">"body"</span> }   <span class="c">// optional</span>
+  }
+}</pre>
+    <p>Codes map to status: <code>VALIDATION_ERROR</code> 422 · <code>UNAUTHENTICATED</code> 401 · <code>FORBIDDEN</code> 403 · <code>NOT_FOUND</code> 404 · <code>CONFLICT</code> 409 · <code>RATE_LIMITED</code> 429. Single resources return the object directly; collections use the envelope above.</p>
+  </section>
+
+  <!-- 08 -->
+  <section id="realtime">
+    <div class="sec-head"><span class="sec-num">08</span><h2>Realtime / WebSocket</h2></div>
+    <p>One endpoint, <code>wss://api.social.localhost/ws</code>, via Elysia <code>.ws()</code>. Clients subscribe to <strong>topics</strong>; the server pushes JSON events. Public topics need no session; the per-user topic requires a valid access-token cookie at upgrade.</p>
+
+    <h3>Client → server</h3>
+<pre>{ <span class="k">"action"</span>: <span class="s">"subscribe"</span>,   <span class="k">"topic"</span>: <span class="s">"post:01J…"</span> }
+{ <span class="k">"action"</span>: <span class="s">"unsubscribe"</span>, <span class="k">"topic"</span>: <span class="s">"feed:global"</span> }</pre>
+
+    <h3>Server → client</h3>
+<pre>{
+  <span class="k">"topic"</span>: <span class="s">"post:01J…"</span>,
+  <span class="k">"event"</span>: <span class="s">"post.liked"</span>,
+  <span class="k">"data"</span>:  { <span class="k">"postId"</span>: <span class="s">"01J…"</span>, <span class="k">"likeCount"</span>: 42 },
+  <span class="k">"ts"</span>:    <span class="s">"2026-06-23T12:00:00.000Z"</span>
+}</pre>
+
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Topic</th><th>Access</th><th>Events</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">feed:global</td><td><span class="badge b-pub">PUBLIC</span></td><td><code>post.created</code></td></tr>
+        <tr><td class="mono">tag:{slug}</td><td><span class="badge b-pub">PUBLIC</span></td><td><code>post.created</code></td></tr>
+        <tr><td class="mono">post:{id}</td><td><span class="badge b-pub">PUBLIC</span></td><td><code>post.liked</code> · <code>post.unliked</code> · <code>post.viewed</code> · <code>comment.created</code> · <code>comment.liked</code></td></tr>
+        <tr><td class="mono">user:{id}</td><td><span class="badge b-auth">AUTH</span></td><td><code>notification.created</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>The WS hub is a small in-memory map of <code>topic → Set&lt;socket&gt;</code>. Any code path that mutates state (a real request handler <em>or</em> the simulator) calls <code>hub.broadcast(topic, event, data)</code> after its DB transaction commits — so the wire is always consistent with the database.</p>
+    <div class="note">
+      <span class="lbl">Signal, not source of truth</span>
+      Treat <code>post.created</code> as a notification that newer content exists, not as the authoritative payload. The reliable path is: socket says "something's new" → client re-fetches via <code>GET /posts?dir=newer&amp;cursor=&lt;head&gt;</code>. This makes dropped/reconnected sockets harmless — on reconnect the client runs that one cursor query to reconcile anything missed while disconnected. The DB (via the cursor) is truth; the socket only decides <em>when</em> to ask. The fat-payload variant (trust the pushed post directly) is fine for this mock too, but the cursor refetch is the gap-proof one and the reason the API returns boundary cursors on every page.
+    </div>
+  </section>
+
+  <!-- 09 -->
+  <section id="sim">
+    <div class="sec-head"><span class="sec-num">09</span><h2>Firehose simulator</h2></div>
+    <p>This is what makes the feed feel alive without you opening a second browser. A timer fires every <code>SIM_INTERVAL_MS</code>; each tick performs N weighted random actions as <strong>bot users</strong> (<code>is_bot=true</code>, seeded up front), writing through the same service layer real requests use and emitting the same WS events.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Action</th><th>Default weight</th><th>Effect &amp; broadcast</th></tr></thead>
+      <tbody>
+        <tr><td>Create post</td><td>20%</td><td>New post (faker text, optional placeholder image, random tags) → <code>post.created</code> on <code>feed:global</code> + tag topics.</td></tr>
+        <tr><td>Comment</td><td>35%</td><td>Comment on a recent post → <code>comment.created</code> on <code>post:{id}</code>.</td></tr>
+        <tr><td>Like post</td><td>30%</td><td>Like a recent post → <code>post.liked</code> + new count.</td></tr>
+        <tr><td>Like comment / follow</td><td>15%</td><td>Like a comment or follow a user → relevant event + notification.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Controlled at runtime via <code>/sim/*</code>. Config: <code>{ enabled, intervalMs, actionsPerTick, weights }</code>. Starts automatically when <code>SIM_ENABLED=true</code>. Because bots act through the real write path, every simulated like/comment lands in SQLite and shows up identically on next page load — no special-casing in your frontend.</p>
+  </section>
+
+  <!-- 10 -->
+  <section id="media">
+    <div class="sec-head"><span class="sec-num">10</span><h2>Media uploads</h2></div>
+    <p><code>POST /media</code> accepts a multipart file, validates mime (images only) and size, writes it under <code>./data/uploads/&lt;ulid&gt;.&lt;ext&gt;</code>, records a <code>media</code> row, and returns <code>{ url }</code>. The returned URL is used as a post's <code>image_url</code>. Bot-generated posts use placeholder image services so the feed has imagery out of the box, giving you image rendering, lazy-loading, and aspect-ratio handling to practice against.</p>
+  </section>
+
+  <!-- 11 -->
+  <section id="structure">
+    <div class="sec-head"><span class="sec-num">11</span><h2>Project structure</h2></div>
+<pre>src/
+  index.ts            <span class="c"># entry: plugins + routes + WS + sim, listen on PORT</span>
+  config.ts           <span class="c"># typed env</span>
+  db/
+    schema.ts         <span class="c"># drizzle tables + relations</span>
+    index.ts          <span class="c"># bun:sqlite + drizzle client</span>
+    migrate.ts        <span class="c"># run migrations on boot</span>
+    seed.ts           <span class="c"># faker users/posts/comments/tags + bots</span>
+  lib/
+    auth.ts           <span class="c"># jwt sign/verify, Bun.password helpers</span>
+    cookies.ts        <span class="c"># set/clear cookie helpers w/ flags</span>
+    csrf.ts           <span class="c"># double-submit check</span>
+    cursor.ts         <span class="c"># encode/decode pagination cursor</span>
+    errors.ts         <span class="c"># error envelope + code→status map</span>
+    realtime.ts       <span class="c"># WS hub: subscribe / unsubscribe / broadcast</span>
+  plugins/
+    cors.ts           <span class="c"># credentialed CORS, single origin</span>
+    auth-guard.ts     <span class="c"># derive user; .auth() + .owner() macros</span>
+  routes/
+    auth.ts  users.ts  posts.ts  comments.ts
+    tags.ts  bookmarks.ts  notifications.ts  media.ts  sim.ts
+  services/           <span class="c"># shared write logic (used by routes AND sim)</span>
+    posts.ts  comments.ts  likes.ts  follows.ts  notifications.ts
+  sim/
+    firehose.ts       <span class="c"># the timer engine + weighted actions</span>
+drizzle.config.ts
+package.json · .env.example</pre>
+    <p class="muted" style="font-size:14px;">Key structural decision: a <code>services/</code> layer holds every state mutation. Routes are thin (validate → call service → respond), and the simulator calls the exact same services. One code path, so simulated and real data can never diverge.</p>
+  </section>
+
+  <!-- 12 -->
+  <section id="config">
+    <div class="sec-head"><span class="sec-num">12</span><h2>Config &amp; env</h2></div>
+<pre><span class="c"># .env.example</span>
+PORT=                          <span class="c"># injected by Portless</span>
+DB_PATH=./data/app.db
+JWT_SECRET=change-me-locally
+ACCESS_TOKEN_TTL=15m
+REFRESH_TOKEN_TTL=7d
+
+CORS_ORIGIN=https://app.social.localhost
+COOKIE_SECURE=true
+CSRF_ENABLED=true
+
+SIM_ENABLED=true
+SIM_INTERVAL_MS=4000
+SIM_ACTIONS_PER_TICK=1
+SIM_CONTROL_ENABLED=true       <span class="c"># expose /sim/* endpoints</span></pre>
+  </section>
+
+  <!-- 13 -->
+  <section id="dev">
+    <div class="sec-head"><span class="sec-num">13</span><h2>Local dev with Portless</h2></div>
+    <p>Portless serves HTTPS by default (local CA, HTTP/2), which is exactly why <code>Secure</code> cookies and a fixed CORS origin work locally. Use <code>.localhost</code> (the default) — not <code>.local</code>, which collides with mDNS/Bonjour.</p>
+<pre><span class="c"># one-time</span>
+bun install
+bun run db:migrate &amp;&amp; bun run db:seed
+portless trust                 <span class="c"># trust local CA (first run)</span>
+
+<span class="c"># run API at https://api.social.localhost</span>
+portless api.social bun run dev
+
+<span class="c"># your frontend, separately, e.g.:</span>
+portless app.social bun run dev    <span class="c"># https://app.social.localhost</span></pre>
+    <p>From the frontend, every call is <code>fetch(url, { credentials: "include" })</code> and the browser handles cookies automatically — no <code>Authorization</code> header juggling. Swagger lives at <code>https://api.social.localhost/docs</code>.</p>
+  </section>
+
+  <!-- 14 -->
+  <section id="build">
+    <div class="sec-head"><span class="sec-num">14</span><h2>Build order</h2></div>
+    <p class="lead">Suggested milestones for implementation — each one independently runnable.</p>
+    <ol class="spaced">
+      <li><strong>Skeleton.</strong> Bun + Elysia app, config, CORS, <code>/health</code>, Swagger, bun:sqlite + Drizzle wired, migrations run on boot.</li>
+      <li><strong>Schema + seed.</strong> All tables &amp; relations; faker seed incl. bot users and a starter feed.</li>
+      <li><strong>Auth.</strong> register/login/refresh/logout/me, cookie helpers, JWT guard, CSRF toggle, ownership macro.</li>
+      <li><strong>Core reads.</strong> Posts list (cursor/sort/filter), post detail (+ view increment), comments, profiles, tags — all public.</li>
+      <li><strong>Core writes.</strong> Create/edit/delete posts &amp; comments, likes, follows, bookmarks, notifications — through the <code>services/</code> layer.</li>
+      <li><strong>Realtime.</strong> WS hub + topics; wire every service mutation to broadcast post-commit.</li>
+      <li><strong>Firehose.</strong> Bot engine calling the same services; <code>/sim/*</code> controls.</li>
+      <li><strong>Media.</strong> Upload endpoint + static serving; bot posts get placeholder images.</li>
+    </ol>
+    <div class="note">
+      <span class="lbl">Acceptance check</span>
+      Open <code>/docs</code>, subscribe a raw WS client to <code>feed:global</code>, start the simulator, and watch <code>post.created</code> events stream while new rows land in <code>app.db</code> — with zero authenticated clients connected. That's the whole thesis working end to end.
+    </div>
+  </section>
+
+  <footer>
+    MockStack API · backend design spec · hand off to Claude Code as the implementation source of truth.
+  </footer>
+
+</div>
+</body>
+</html>

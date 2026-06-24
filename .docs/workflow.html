@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MockStack — Workflow</title>
+<link rel="stylesheet" href="tasks/assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Process · commit-log-style task flow</div>
+    <h1>Workflow</h1>
+    <p class="tagline">A lightweight, one-ticket-at-a-time flow for an agent to pick up and
+    complete tasks. One ticket in, one log line out — then stop and wait for approval.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Layout</h2></div>
+<pre>.docs/
+  workflow.html            <span class="c"># this file</span>
+  tasks/
+    status.html            <span class="c"># the pointer: what's next + the log</span>
+    bruno-testing-plan.html<span class="c"># how to write the Bruno tests</span>
+    assets/tasks.css       <span class="c"># shared styling for these notes</span>
+    backlog/               <span class="c"># tickets waiting to be picked up (.html)</span>
+    done/                  <span class="c"># completed tickets (.html)</span></pre>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>How an agent works a task</h2></div>
+    <ol class="spaced">
+      <li><strong>Read <code>status.html</code>.</strong> The <code>Next</code> pointer is the
+      only thing you need to know which ticket to pick.</li>
+      <li><strong>Open that ticket</strong> in <code>backlog/</code>.</li>
+      <li><strong>Do the work</strong> described — code + its Bruno tests (follow
+      <a href="tasks/bruno-testing-plan.html">bruno-testing-plan.html</a>). Leave the commit
+      working and incremental.</li>
+      <li><strong>Capture handoff notes — only if there are any.</strong> An issue, a decision
+      worth flagging, or something a later task should assume → append a <code>Notes</code>
+      section at the bottom of the ticket. Nothing to hand off? Skip it.</li>
+      <li><strong>Move the ticket</strong> from <code>backlog/</code> to <code>done/</code>.</li>
+      <li><strong>Update <code>status.html</code>:</strong> add one log row for what you
+      finished (mark <code>[notes]</code> if you left any), and repoint <code>Next</code> to
+      the following backlog ticket.</li>
+      <li><strong>Stop and wait for approval.</strong> Do not start the next ticket.</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Conventions</h2></div>
+    <ul>
+      <li><strong>One agent, one ticket at a time.</strong> Finish, move, log, stop.</li>
+      <li><strong>Notes are for the <em>next</em> agent</strong> — not a status report. Only
+      what changes how the next task is done: issues, decisions, gotchas.</li>
+      <li><strong><code>done/</code> is history.</strong> Once a ticket lands there, it isn't
+      edited again.</li>
+      <li><strong>Folders are the source of truth for state; <code>status.html</code> is the
+      source of truth for "what now."</strong> If they disagree, trust the folders and fix
+      <code>status.html</code>.</li>
+      <li>Each commit must be working and incremental — no commits that only add empty folders
+      or <code>.gitkeep</code> placeholders.</li>
+    </ul>
+  </section>
+
+  <footer>MockStack · workflow.html · keep it dumb — a pointer plus an append-only log.</footer>
+</div>
+</body>
+</html>

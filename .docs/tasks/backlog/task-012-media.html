@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-012 — Media uploads</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-012</div>
+    <h1>Media uploads</h1>
+    <p class="tagline">Multipart image upload that validates mime + size, stores under
+    <code>./data/uploads/</code>, records a <code>media</code> row, and returns a
+    <code>{ url }</code> usable as a post's <code>image_url</code>.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/routes/media.ts</code>:
+        <ul>
+          <li><code>POST /api/media</code> <span class="badge b-auth">AUTH</span> — multipart;
+          validate images-only mime + max size; write
+          <code>./data/uploads/&lt;ulid&gt;.&lt;ext&gt;</code>; insert <code>media</code> row;
+          return <code>{ url }</code>.</li>
+          <li><code>GET /api/media/:file</code> <span class="badge b-pub">PUBLIC</span> — serve
+          the file with the right content-type.</li>
+        </ul>
+      </li>
+      <li>Confirm <code>POST /posts</code> accepts the returned URL as <code>image_url</code>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li>Uploading a small PNG/JPEG returns <code>{ url }</code> and writes the file + row.</li>
+      <li>Non-image mime → 422; oversize → 422 (or 413, document).</li>
+      <li><code>GET /media/:file</code> serves the bytes with correct content-type.</li>
+      <li>Creating a post with that URL renders <code>image_url</code> on read.</li>
+      <li>Upload 401 unauthenticated.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests — <code>09-media/</code></h2></div>
+    <p>Auth required. Use a <code>body:multipart-form</code> request with a small fixture
+    image checked into <code>bruno/09-media/fixtures/</code>. Assert <code>{ url }</code>,
+    capture it, then GET it back (200 + image content-type). Create a post using the URL and
+    confirm it reads back. Add the 401 + bad-mime cases.</p>
+  </section>
+
+  <footer>MockStack · task-012 · build order milestone 8 (Media)</footer>
+</div>
+</body>
+</html>

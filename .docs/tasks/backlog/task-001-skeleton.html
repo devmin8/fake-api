@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-001 — Project skeleton</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-001 · <span class="badge b-next">NEXT</span></div>
+    <h1>Project skeleton</h1>
+    <p class="tagline">A runnable Bun + Elysia app that boots, serves <code>/health</code>,
+    exposes Swagger at <code>/docs</code>, applies credentialed CORS, and returns errors in
+    the standard envelope. Plus the Bruno collection skeleton every later task plugs into.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>package.json</code>, <code>tsconfig.json</code>, Bun + Elysia deps. Scripts:
+      <code>dev</code>, <code>start</code>.</li>
+      <li><code>.env.example</code> (all vars from the design's Config section) +
+      <code>src/config.ts</code> (typed env loader with sane defaults).</li>
+      <li><code>src/index.ts</code> — Elysia app, listen on <code>PORT</code>, mount plugins
+      + routes.</li>
+      <li><code>src/plugins/cors.ts</code> — credentialed CORS, single origin from
+      <code>CORS_ORIGIN</code> (echo exact origin, <code>Allow-Credentials: true</code>,
+      never <code>*</code>).</li>
+      <li><code>src/lib/errors.ts</code> — envelope <code>{ error: { code, message, details? } }</code>
+      and the code→status map (<code>VALIDATION_ERROR</code> 422 · <code>UNAUTHENTICATED</code>
+      401 · <code>FORBIDDEN</code> 403 · <code>NOT_FOUND</code> 404 · <code>CONFLICT</code> 409
+      · <code>RATE_LIMITED</code> 429). Wire as Elysia <code>onError</code>.</li>
+      <li><code>@elysiajs/swagger</code> at <code>/docs</code>.</li>
+      <li><code>GET /health</code> → <code>{ status: "ok" }</code>.</li>
+      <li><code>bruno/</code> collection: <code>bruno.json</code>, <code>collection.bru</code>
+      (vars + the auth/CSRF pre-request from the testing plan — harmless with no creds yet),
+      <code>environments/local.bru</code> (<code>baseUrl</code>, <code>testEmail</code>,
+      <code>testPassword</code>), and the <code>01-health/</code> folder.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li><code>bun run dev</code> starts and logs the listen URL.</li>
+      <li><code>GET /health</code> returns <code>{ status: "ok" }</code>.</li>
+      <li><code>/docs</code> renders Swagger UI.</li>
+      <li>A thrown/unknown-route error returns the error envelope, not a raw stack.</li>
+      <li>Bruno: <code>bru run 01-health --env local</code> passes (status 200 + body shape).</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests</h2></div>
+    <p>Follow <a href="../bruno-testing-plan.html">bruno-testing-plan.html</a>. This task
+    creates <code>collection.bru</code> (with the collection-level auth/CSRF pre-request) and
+    the <code>local</code> environment. Auth vars stay empty until task-004 — fine, the script
+    no-ops when they're unset. Folder <code>01-health</code> asserts <code>/health</code>
+    returns 200 and <code>status = ok</code>.</p>
+  </section>
+
+  <footer>MockStack · task-001 · build order milestone 1 (Skeleton)</footer>
+</div>
+</body>
+</html>

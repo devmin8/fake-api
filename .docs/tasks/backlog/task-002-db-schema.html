@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-002 — Database &amp; schema</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-002</div>
+    <h1>Database &amp; schema</h1>
+    <p class="tagline">SQLite (<code>bun:sqlite</code>) wired to Drizzle, the full relational
+    schema defined, and migrations that run on boot so the app creates
+    <code>./data/app.db</code> with every table.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/db/index.ts</code> — <code>bun:sqlite</code> connection (path from
+      <code>DB_PATH</code>) + Drizzle client, <code>PRAGMA foreign_keys = ON</code>.</li>
+      <li><code>src/db/schema.ts</code> — all tables + relations from the design:
+      <code>users, posts, comments, likes</code> (polymorphic), <code>follows, bookmarks,
+      tags, post_tags, notifications, refresh_tokens, media</code>.
+        <ul>
+          <li>ULID primary keys (time-sortable). ISO-8601 UTC timestamps.</li>
+          <li>Denormalized counts on <code>posts</code> (<code>like_count, comment_count,
+          view_count</code>) and <code>comments</code> (<code>like_count</code>).</li>
+          <li>Uniqueness: <code>users.username/email</code>, <code>tags.name/slug</code>,
+          <code>likes(user_id,target_type,target_id)</code>; composite PKs for
+          <code>follows</code>, <code>bookmarks</code>, <code>post_tags</code>.</li>
+          <li><code>ON DELETE CASCADE</code> for children that can't outlive their parent
+          (comments, likes, post_tags, bookmarks).</li>
+        </ul>
+      </li>
+      <li><code>drizzle.config.ts</code> + <code>src/db/migrate.ts</code> (run migrations,
+      called on boot from <code>index.ts</code>). Scripts: <code>db:generate</code>,
+      <code>db:migrate</code>.</li>
+      <li>ULID helper in <code>src/lib/ids.ts</code>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li><code>bun run db:generate</code> produces migration SQL; <code>db:migrate</code>
+      applies it.</li>
+      <li>Booting the app creates <code>./data/app.db</code> with all tables.</li>
+      <li>FKs enforced (a manual insert with a bad FK fails).</li>
+      <li><code>GET /health</code> still works (no regression).</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests</h2></div>
+    <p>No new endpoints → no new Bruno folder. Just confirm <code>01-health</code> still
+    passes after wiring the DB + boot migrations.</p>
+  </section>
+
+  <footer>MockStack · task-002 · build order milestone 2 (Schema)</footer>
+</div>
+</body>
+</html>

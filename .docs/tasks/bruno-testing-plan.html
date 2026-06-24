@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MockStack — Bruno Testing Plan</title>
+<link rel="stylesheet" href="assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Testing strategy · read before writing any Bruno tests</div>
+    <h1>Bruno <span class="thin">Testing Plan</span></h1>
+    <p class="tagline">How we test every API as we build it. The goal: tests that run in
+    a deterministic order, log in <strong>once</strong>, and stay green in both the Bruno
+    app and the headless <code>bru</code> CLI.</p>
+  </header>
+
+  <section id="why">
+    <div class="sec-head"><span class="sec-num">01</span><h2>Why this plan exists</h2></div>
+    <p>Cookie + CSRF auth is the thing that bites you when every request needs a session.
+    Two facts drive the whole design:</p>
+    <ol class="spaced">
+      <li><strong>The Bruno desktop app has an automatic cookie jar</strong> —
+      <code>Set-Cookie</code> is captured and replayed on later requests. Interactively,
+      auth "just works" after login.</li>
+      <li><strong>The Bruno CLI does <em>not</em> auto-save <code>Set-Cookie</code> from 2xx
+      responses</strong> (only from 3xx redirects — Bruno issues #8090/#6000). In CI the jar
+      is empty and nothing is authenticated unless we capture the cookie ourselves.</li>
+    </ol>
+    <p>So we <strong>capture auth explicitly on login</strong> and <strong>re-inject it via a
+    collection-level pre-request script</strong>. That one pattern makes the suite behave
+    identically in the app and the CLI.</p>
+  </section>
+
+  <section id="layout">
+    <div class="sec-head"><span class="sec-num">02</span><h2>Collection layout</h2></div>
+    <p>The Bruno collection lives at the repo root in <code>bruno/</code>. One
+    numerically-prefixed folder per resource so run order is deterministic (the runner
+    orders folders <strong>alphabetically</strong>, and requests within a folder by their
+    <code>seq</code>).</p>
+<pre>bruno/
+  bruno.json                 <span class="c"># collection config (scripts.flow = sandwich)</span>
+  collection.bru             <span class="c"># collection vars + pre-request: inject auth + CSRF</span>
+  environments/
+    local.bru                <span class="c"># baseUrl + test credentials</span>
+  01-health/
+  02-auth/                   <span class="c"># register/login/me/refresh/logout — runs FIRST</span>
+  03-posts-read/
+  04-comments-read/
+  05-users-tags-read/
+  06-posts-write/
+  07-likes-bookmarks/
+  08-follows-feed-notifications/
+  09-media/
+  10-sim/</pre>
+    <ul>
+      <li><strong>Folders:</strong> numeric prefix (<code>01-</code>, <code>02-</code>, …) =
+      alphabetical = intended order.</li>
+      <li><strong>Requests:</strong> explicit <code>seq</code> in <code>meta</code>, leaving
+      gaps (10, 20, 30) so you can insert later without renumbering.</li>
+      <li><code>02-auth/login</code> must run before any folder that needs a session.</li>
+    </ul>
+  </section>
+
+  <section id="auth">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Auth strategy (the important part)</h2></div>
+
+    <h3>1 · Login captures the cookies into environment vars</h3>
+    <p>Login (and register) parse <code>Set-Cookie</code> off the response headers and store
+    the raw values so we can replay them. We use <strong>env vars</strong> (persist for the
+    whole run), not runtime vars.</p>
+<pre><span class="c"># bruno/02-auth/login.bru</span>
+meta {
+  name: Login
+  type: http
+  seq: 20
+}
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+body:json {
+  { <span class="k">"email"</span>: <span class="s">"{{testEmail}}"</span>, <span class="k">"password"</span>: <span class="s">"{{testPassword}}"</span> }
+}
+script:post-response {
+  <span class="c">// Works in BOTH app and CLI: read Set-Cookie straight off the</span>
+  <span class="c">// response, don't depend on the jar being populated.</span>
+  const raw = res.headers['set-cookie'] || [];
+  const cookies = Array.isArray(raw) ? raw : [raw];
+  const pick = (name) =&gt; {
+    const hit = cookies.find(c =&gt; c.startsWith(name + '='));
+    return hit ? hit.split(';')[0].split('=').slice(1).join('=') : null;
+  };
+  const access  = pick('access_token');
+  const refresh = pick('refresh_token');
+  const csrf    = pick('csrf_token');
+  if (access)  bru.setEnvVar('accessToken', access);
+  if (refresh) bru.setEnvVar('refreshToken', refresh);
+  if (csrf)    bru.setEnvVar('csrfToken', csrf);
+}
+assert {
+  res.status: eq 200
+}</pre>
+
+    <h3>2 · Collection pre-request replays cookie + CSRF on every request</h3>
+<pre><span class="c"># bruno/collection.bru</span>
+script:pre-request {
+  const access  = bru.getEnvVar('accessToken');
+  const refresh = bru.getEnvVar('refreshToken');
+  const csrf    = bru.getEnvVar('csrfToken');
+  <span class="c">// Re-send the auth cookie ourselves (CLI jar won't).</span>
+  const parts = [];
+  if (access)  parts.push(`access_token=${access}`);
+  if (refresh) parts.push(`refresh_token=${refresh}`);
+  if (csrf)    parts.push(`csrf_token=${csrf}`);
+  if (parts.length) req.setHeader('Cookie', parts.join('; '));
+  <span class="c">// Double-submit CSRF header for mutating requests.</span>
+  if (csrf) req.setHeader('X-CSRF-Token', csrf);
+}</pre>
+    <p>Every request inherits this, so individual requests don't repeat auth wiring — they
+    just assume they're logged in. Public requests are unaffected: an extra cookie/header
+    is harmless.</p>
+    <div class="note">
+      <span class="lbl">Tip while learning a frontend</span>
+      The API gates CSRF behind <code>CSRF_ENABLED</code>. Run the test API with
+      <code>CSRF_ENABLED=false</code> to drop the header dance entirely. Keep the capture code
+      anyway, so turning CSRF back on needs no test changes.
+    </div>
+
+    <h3>3 · Logout / refresh</h3>
+    <ul>
+      <li><code>refresh</code> is the only request needing the refresh cookie — the
+      collection pre-request already injects it.</li>
+      <li><code>logout</code> clears the env vars in its post-response so later runs start
+      clean.</li>
+    </ul>
+  </section>
+
+  <section id="chaining">
+    <div class="sec-head"><span class="sec-num">04</span><h2>Capturing ids for chained requests</h2></div>
+    <p>Requests that create rows hand ids to later requests. Capture into an env var in the
+    post-response and reference with <code>{{…}}</code>:</p>
+<pre>script:post-response {
+  bru.setEnvVar('postId', res.body.id);
+}</pre>
+    <p>A later request then uses <code>{{baseUrl}}/api/posts/{{postId}}</code>. This is how
+    "create post" → "like post" → "comment" → "delete post" chains inside a write folder
+    without hardcoding ids.</p>
+  </section>
+
+  <section id="assert">
+    <div class="sec-head"><span class="sec-num">05</span><h2>Assertions</h2></div>
+    <ul>
+      <li>Use the declarative <code>assert</code> block for cheap status/shape checks.</li>
+      <li>Use <code>script:tests</code> (Chai <code>expect</code>) only when you need logic
+      (loops, computed values, conditionals).</li>
+      <li>Every request gets at least a status assertion. Error cases get their own request
+      asserting the envelope <code>res.body.error.code</code>.</li>
+    </ul>
+<pre>assert {
+  res.status: eq 200
+  res.body.id: isDefined
+  res.body.data: isArray
+}</pre>
+  </section>
+
+  <section id="coverage">
+    <div class="sec-head"><span class="sec-num">06</span><h2>Per-resource coverage checklist</h2></div>
+    <p>Each build task adds its folder and covers, at minimum:</p>
+    <ul>
+      <li><strong>Happy path</strong> for every endpoint it introduces.</li>
+      <li><strong>Auth boundary:</strong> one unauthenticated call to an AUTH endpoint
+      asserting <code>401</code>.</li>
+      <li><strong>Ownership boundary</strong> (where relevant): a second user hitting an
+      OWNER endpoint asserting <code>403</code>.</li>
+      <li><strong>Not found:</strong> a bad id asserting <code>404</code>.</li>
+      <li><strong>Validation:</strong> a bad body asserting <code>422</code> +
+      <code>error.code = VALIDATION_ERROR</code>.</li>
+    </ul>
+  </section>
+
+  <section id="cli">
+    <div class="sec-head"><span class="sec-num">07</span><h2>Running headless (CI / quick check)</h2></div>
+<pre>npm install -g @usebruno/cli      <span class="c"># or: npx @usebruno/cli</span>
+cd bruno
+bru run --env local                       <span class="c"># whole suite, in order</span>
+bru run 06-posts-write --env local        <span class="c"># one folder</span>
+bru run --env local --reporter-junit out/results.xml</pre>
+    <p>Non-zero exit on any failed assertion, so it gates a pipeline directly. Folders run
+    alphabetically and requests by <code>seq</code>, so <code>02-auth</code> logs in before
+    the write folders.</p>
+  </section>
+
+  <section id="gotchas">
+    <div class="sec-head"><span class="sec-num">08</span><h2>Gotchas (don't relearn these)</h2></div>
+    <ol class="spaced">
+      <li>CLI won't save 2xx <code>Set-Cookie</code> — we capture + replay manually. Never
+      assume the jar.</li>
+      <li><code>jar.getCookie(…)</code> is <strong>async</strong> — but we avoid the jar
+      entirely and read <code>res.headers['set-cookie']</code>, which works everywhere.</li>
+      <li>Folders order <strong>alphabetically</strong> — keep the numeric prefixes.</li>
+      <li>Leave <code>seq</code> gaps within a folder.</li>
+      <li>WebSocket topics aren't covered by Bruno — the realtime task ships a tiny
+      <code>bun</code> script that subscribes and asserts an event instead.</li>
+    </ol>
+  </section>
+
+  <footer>
+    MockStack · bruno-testing-plan.html · the auth pattern here is the whole reason the suite stays green in CI.
+  </footer>
+
+</div>
+</body>
+</html>

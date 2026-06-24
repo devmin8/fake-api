@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-010 — Follows, feed &amp; notifications</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-010</div>
+    <h1>Follows, feed &amp; notifications</h1>
+    <p class="tagline">The social graph closes: follow/unfollow, the personalized
+    <code>/feed</code>, profile self-edit, and the notifications that get written whenever
+    someone likes/comments/follows you.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/services/follows.ts</code> — follow/unfollow; writes a notification.</li>
+      <li><code>src/services/notifications.ts</code> — <code>createNotification</code> used by
+      likes/comments/follows services (retro-wire task-008/009 calls to emit notifications).</li>
+      <li>Routes:
+        <ul>
+          <li><code>POST</code>/<code>DELETE /api/users/:username/follow</code>
+          <span class="badge b-auth">AUTH</span>.</li>
+          <li><code>GET /api/feed</code> <span class="badge b-auth">AUTH</span> — posts from
+          people you follow, cursor paginated.</li>
+          <li><code>PATCH /api/users/me</code> <span class="badge b-auth">AUTH</span> — display
+          name, bio, avatar.</li>
+          <li><code>GET /api/notifications</code> (<code>?unread=true</code>)
+          <span class="badge b-auth">AUTH</span>.</li>
+          <li><code>POST /api/notifications/:id/read</code> and <code>/read-all</code>
+          <span class="badge b-auth">AUTH</span>.</li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li>Follow → followee gains a follower; a <code>notification</code> row is written.</li>
+      <li><code>/feed</code> returns only posts from followed users, paginated; empty when you
+      follow nobody.</li>
+      <li>Liking/commenting (from task-008/009) now writes a notification to the recipient.</li>
+      <li><code>PATCH /users/me</code> updates only allowed fields.</li>
+      <li><code>?unread=true</code> filters; mark-read and read-all flip <code>is_read</code>.</li>
+      <li>All endpoints 401 unauthenticated; can't follow yourself (guard).</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests — <code>08-follows-feed-notifications/</code></h2></div>
+    <p>Auth required. Follow a seeded user → assert their follower count rose and a
+    notification exists for them (or assert via the actor side). Fetch <code>/feed</code>;
+    after following someone with posts, the feed is non-empty. Patch <code>/users/me</code>
+    and read it back. List notifications, mark one read, then read-all → all
+    <code>is_read=true</code>. 401 + self-follow 409/422 cases.</p>
+  </section>
+
+  <footer>MockStack · task-010 · build order milestone 5 (Core writes)</footer>
+</div>
+</body>
+</html>

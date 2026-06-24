@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-013 — Firehose simulator</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-013 · final</div>
+    <h1>Firehose simulator</h1>
+    <p class="tagline">The payoff: bot users that post/comment/like/follow on a timer through
+    the <em>same</em> services real requests use — so the feed visibly streams with zero
+    authenticated clients. Plus the <code>/sim/*</code> control surface.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/sim/firehose.ts</code> — a timer firing every <code>SIM_INTERVAL_MS</code>;
+      each tick runs <code>SIM_ACTIONS_PER_TICK</code> weighted random actions as
+      <code>is_bot</code> users via the services layer (create post 20% · comment 35% · like
+      post 30% · like-comment/follow 15%). Bot posts use placeholder image URLs. Auto-starts
+      when <code>SIM_ENABLED=true</code>.</li>
+      <li><code>src/routes/sim.ts</code> (gated by <code>SIM_CONTROL_ENABLED</code>):
+        <ul>
+          <li><code>GET /api/sim/status</code> — running state + config.</li>
+          <li><code>POST /api/sim/start</code> · <code>POST /api/sim/stop</code>.</li>
+          <li><code>PATCH /api/sim/config</code> — interval / actions-per-tick / weights.</li>
+        </ul>
+      </li>
+      <li>Because bots go through the services, every action broadcasts the same WS events and
+      lands in SQLite identically to real writes.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance — the whole thesis</h2></div>
+    <ul class="check">
+      <li>Start the sim → new posts/comments/likes appear in <code>app.db</code> over time.</li>
+      <li>A raw WS client on <code>feed:global</code> sees <code>post.created</code> stream
+      with <strong>zero</strong> authenticated clients connected.</li>
+      <li><code>/sim/status</code> reflects running state; start/stop toggle it; config patch
+      changes cadence/weights live.</li>
+      <li>Counts stay consistent (bots use the same transactional services).</li>
+      <li><code>/sim/*</code> is hidden when <code>SIM_CONTROL_ENABLED=false</code>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests — <code>10-sim/</code></h2></div>
+    <p>Public control endpoints. <code>status</code> → assert shape; <code>start</code> →
+    <code>status</code> shows running; <code>config</code> patch → reflected in
+    <code>status</code>; <code>stop</code> → not running. For the streaming proof, reuse the
+    <code>scripts/ws-smoke.ts</code> from task-011 but driven by the sim instead of a manual
+    POST: start sim, assert a <code>post.created</code> arrives, stop sim. Document the full
+    acceptance check (open <code>/docs</code>, subscribe WS, start sim, watch the stream) in
+    the README.</p>
+  </section>
+
+  <footer>MockStack · task-013 · build order milestone 7 (Firehose) · ships the demo</footer>
+</div>
+</body>
+</html>

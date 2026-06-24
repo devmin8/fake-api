@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MockStack — Status</title>
+<link rel="stylesheet" href="assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Task tracker · the one pointer that says "what now"</div>
+    <h1>Status</h1>
+    <p class="tagline">Newest-on-top, append-only log plus a single <b>Next</b> pointer.
+    An agent reads <b>Next</b>, does that ticket, logs one line, repoints. Nothing else.</p>
+  </header>
+
+  <section id="next">
+    <div class="sec-head"><span class="sec-num">▶</span><h2>Next</h2></div>
+    <p>
+      <span class="badge b-next">NEXT</span>
+      <strong>task-001 — Project skeleton</strong> &nbsp;→&nbsp;
+      <a href="backlog/task-001-skeleton.html"><code>backlog/task-001-skeleton.html</code></a>
+    </p>
+    <p class="muted">Then, in order: 002 schema · 003 seed · 004 auth · 005 posts-read ·
+    006 comments-read · 007 users-tags-read · 008 posts-write · 009 likes-bookmarks ·
+    010 follows-feed-notifications · 011 realtime · 012 media · 013 firehose.</p>
+  </section>
+
+  <section id="log">
+    <div class="sec-head"><span class="sec-num">≡</span><h2>Log</h2></div>
+    <p class="muted">Newest on top. Append-only — never rewrite a past line. Add the
+    <code>[notes]</code> flag only when a ticket left handoff notes.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Ticket</th><th>State</th><th>Ticket file</th></tr></thead>
+      <tbody>
+        <tr><td colspan="3" class="muted">— nothing done yet; task-001 is up next —</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <footer>
+    MockStack · status.html · folders are the source of truth for state; this file is the source of truth for "what now".
+  </footer>
+
+</div>
+</body>
+</html>

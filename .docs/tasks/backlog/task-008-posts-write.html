@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-008 — Posts &amp; comments: writes</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-008</div>
+    <h1>Posts &amp; comments: writes</h1>
+    <p class="tagline">The <code>services/</code> layer begins here. Create/edit/delete posts
+    and create/delete comments — through shared write services so the firehose can reuse the
+    exact same code path later.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/services/posts.ts</code> — <code>createPost</code>, <code>updatePost</code>,
+      <code>deletePost</code> (cascades). Maintains tags via <code>post_tags</code>.</li>
+      <li><code>src/services/comments.ts</code> — <code>createComment</code> (bumps the post's
+      <code>comment_count</code> in the same transaction), <code>deleteComment</code>.</li>
+      <li>Routes (writes added to existing files):
+        <ul>
+          <li><code>POST /api/posts</code> <span class="badge b-auth">AUTH</span> — title,
+          body, optional image, tags.</li>
+          <li><code>PATCH /api/posts/:id</code> <span class="badge b-owner">OWNER</span> ·
+          <code>DELETE /api/posts/:id</code> <span class="badge b-owner">OWNER</span>.</li>
+          <li><code>POST /api/posts/:id/comments</code> <span class="badge b-auth">AUTH</span>.</li>
+          <li><code>DELETE /api/comments/:id</code> <span class="badge b-owner">OWNER</span>.</li>
+        </ul>
+      </li>
+      <li>Validation via Elysia <code>t</code>; errors through the standard envelope.
+      Broadcasts are stubbed/no-op until task-011 (leave a clean seam — services return
+      enough for a broadcaster to fire later).</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li>Create post returns the row; it appears in <code>GET /posts</code>.</li>
+      <li>Edit/delete enforce ownership (403 for a non-owner; 401 unauthenticated).</li>
+      <li>Delete cascades (comments/likes/post_tags gone).</li>
+      <li>Comment create bumps <code>comment_count</code>; delete restores it.</li>
+      <li>Invalid body → 422 + <code>VALIDATION_ERROR</code>.</li>
+      <li>Counts stay consistent under create→delete.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests — <code>06-posts-write/</code></h2></div>
+    <p>Auth required — relies on <code>02-auth/login</code> having set the auth env vars.
+    Chain (seq): create post → capture <code>postId</code> → it shows in list → patch it →
+    comment on it (capture <code>commentId</code>) → delete the comment → delete the post.
+    Boundary cases: create unauthenticated → 401; patch/delete as a <em>second</em> user → 403
+    (register a throwaway user for this, or assert with no session); bad body → 422.</p>
+    <div class="note"><span class="lbl">Second-user ownership test</span>
+    To test 403 cleanly, add a <code>register</code> for a second user in this folder, swap the
+    auth env vars to that user for the owner-violation request, then restore the primary
+    user's vars. Document the swap in the request's pre/post scripts.</div>
+  </section>
+
+  <footer>MockStack · task-008 · build order milestone 5 (Core writes)</footer>
+</div>
+</body>
+</html>

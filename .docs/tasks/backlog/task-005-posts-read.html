@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-005 — Posts: reads &amp; pagination</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-005</div>
+    <h1>Posts: reads &amp; pagination</h1>
+    <p class="tagline">The cursor engine plus the public post reads: list (sort/filter/
+    directional cursor), detail (with view increment), and the cheap "how many newer"
+    head-check.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/lib/cursor.ts</code> — encode/decode the opaque base64
+      <code>created_at|id</code> cursor; the directional <code>older|newer</code> contract
+      from the design's Conventions (newer = ascending-from-cursor, adjacent-to-head first).</li>
+      <li>Collection envelope helper: <code>{ data, newestCursor, oldestCursor, hasMore }</code>.</li>
+      <li><code>src/routes/posts.ts</code> (reads only this task):
+        <ul>
+          <li><code>GET /api/posts</code> — <code>?sort=new|top|trending</code>,
+          <code>?tag=</code>, <code>?author=</code>, <code>?cursor=</code>,
+          <code>?dir=older|newer</code>, <code>?limit=</code> (default 20, max 100).
+          <code>top</code>/<code>trending</code> paginate older-only within a frozen order.</li>
+          <li><code>GET /api/posts/:id</code> — detail; increments <code>view_count</code>
+          (broadcast wired later in task-011).</li>
+          <li><code>GET /api/posts/updates?since=&lt;cursor&gt;</code> →
+          <code>{ count, newestCursor, previews? }</code>.</li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li>List returns the envelope with both boundary cursors and correct
+      <code>hasMore</code>.</li>
+      <li><code>dir=older</code> backfills strictly older; <code>dir=newer</code> returns
+      strictly newer, adjacent-to-head first. No gaps/dupes across two stitched pages.</li>
+      <li><code>sort=top</code> orders by <code>like_count</code>; <code>trending</code>
+      blends likes+comments decayed by age.</li>
+      <li>Filters <code>?tag=</code> and <code>?author=</code> narrow correctly.</li>
+      <li>Detail increments <code>view_count</code> by 1 per call.</li>
+      <li><code>/updates</code> returns an accurate count of newer items.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests — <code>03-posts-read/</code></h2></div>
+    <p>All public (no auth needed). Cover: default list shape; <code>limit</code> respected;
+    a two-page <code>older</code> backfill using the returned <code>oldestCursor</code>; a
+    <code>newer</code> catch-up; <code>sort=top</code>; <code>tag</code> + <code>author</code>
+    filters; detail 200 + capture <code>postId</code> into an env var for reuse; detail 404
+    on a bad id; <code>/updates</code> count. Capture a real id from the list response rather
+    than hardcoding.</p>
+  </section>
+
+  <footer>MockStack · task-005 · build order milestone 4 (Core reads)</footer>
+</div>
+</body>
+</html>

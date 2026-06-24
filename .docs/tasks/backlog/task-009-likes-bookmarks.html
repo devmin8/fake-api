@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-009 — Likes &amp; bookmarks</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-009</div>
+    <h1>Likes &amp; bookmarks</h1>
+    <p class="tagline">Polymorphic likes over posts and comments with denormalized counts,
+    plus per-user bookmarks — all through the services layer.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/services/likes.ts</code> — <code>like</code>/<code>unlike</code> over
+      <code>(target_type, target_id)</code> with the uniqueness guard (no double-like →
+      409/idempotent, pick one and document). Updates <code>like_count</code> on the target
+      in the same transaction.</li>
+      <li>Bookmark logic (in <code>services/posts.ts</code> or a small
+      <code>services/bookmarks.ts</code>).</li>
+      <li>Routes:
+        <ul>
+          <li><code>POST</code>/<code>DELETE /api/posts/:id/like</code>
+          <span class="badge b-auth">AUTH</span>.</li>
+          <li><code>POST</code>/<code>DELETE /api/comments/:id/like</code>
+          <span class="badge b-auth">AUTH</span>.</li>
+          <li><code>POST</code>/<code>DELETE /api/posts/:id/bookmark</code>
+          <span class="badge b-auth">AUTH</span>.</li>
+          <li><code>GET /api/bookmarks</code> <span class="badge b-auth">AUTH</span> — your
+          bookmarked posts (paginated).</li>
+        </ul>
+      </li>
+      <li>Broadcast seam left for task-011 (like → <code>post.liked</code> + new count).</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li>Like a post → <code>like_count</code> +1; unlike → −1; double-like is guarded.</li>
+      <li>Like a comment behaves the same on the comment's count.</li>
+      <li>Bookmark/un-bookmark toggles; <code>GET /bookmarks</code> reflects it.</li>
+      <li>All four endpoints 401 unauthenticated.</li>
+      <li>Counts never drift below 0 or double-count.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests — <code>07-likes-bookmarks/</code></h2></div>
+    <p>Auth required. Reuse a <code>postId</code>/<code>commentId</code> (capture fresh if
+    not in env). Chain: read count → like → assert count +1 → like again → assert guard →
+    unlike → assert count back. Bookmark → appears in <code>GET /bookmarks</code> → un-bookmark
+    → gone. Add 401 cases.</p>
+  </section>
+
+  <footer>MockStack · task-009 · build order milestone 5 (Core writes)</footer>
+</div>
+</body>
+</html>

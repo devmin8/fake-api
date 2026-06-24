@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-007 — Users &amp; Tags: reads</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-007</div>
+    <h1>Users &amp; Tags: reads</h1>
+    <p class="tagline">The remaining public read surface: profiles with counts, a user's
+    posts, followers/following, the tag index, and posts within a tag.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/routes/users.ts</code> (reads only):
+        <ul>
+          <li><code>GET /api/users/:username</code> — profile + counts (posts, followers,
+          following).</li>
+          <li><code>GET /api/users/:username/posts</code> — paginated.</li>
+          <li><code>GET /api/users/:username/followers</code> and <code>/following</code>.</li>
+        </ul>
+      </li>
+      <li><code>src/routes/tags.ts</code>:
+        <ul>
+          <li><code>GET /api/tags</code> — all tags with post counts.</li>
+          <li><code>GET /api/tags/:slug/posts</code> — posts in a tag (paginated).</li>
+        </ul>
+      </li>
+      <li>Reuse the cursor envelope for all list endpoints.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li>Profile returns accurate denormalized/derived counts.</li>
+      <li>User posts, followers, following all paginate.</li>
+      <li>Tag index lists tags with correct post counts.</li>
+      <li><code>/tags/:slug/posts</code> returns only that tag's posts.</li>
+      <li>404 for unknown username / unknown slug.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests — <code>05-users-tags-read/</code></h2></div>
+    <p>Public. Fetch the seeded test user's profile (username from the <code>local</code>
+    env or captured at login), its posts and followers/following. Hit <code>/tags</code>,
+    capture a <code>tagSlug</code>, fetch its posts. Add 404 cases. These reads round out the
+    public surface before writes begin.</p>
+  </section>
+
+  <footer>MockStack · task-007 · build order milestone 4 (Core reads)</footer>
+</div>
+</body>
+</html>

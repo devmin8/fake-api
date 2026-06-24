@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-011 — Realtime / WebSocket</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-011</div>
+    <h1>Realtime / WebSocket</h1>
+    <p class="tagline">One <code>/ws</code> endpoint, a topic hub, and every service mutation
+    wired to broadcast <strong>after</strong> its transaction commits — so the wire is always
+    consistent with the DB.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/lib/realtime.ts</code> — in-memory hub: <code>topic → Set&lt;socket&gt;</code>,
+      with <code>subscribe</code>/<code>unsubscribe</code>/<code>broadcast(topic, event, data)</code>.</li>
+      <li>Elysia <code>.ws('/ws')</code> — handle <code>{action:"subscribe"|"unsubscribe",
+      topic}</code>; public topics open, <code>user:{id}</code> requires a valid access cookie
+      at upgrade.</li>
+      <li>Topics + events per the design: <code>feed:global</code> &amp; <code>tag:{slug}</code>
+      (<code>post.created</code>); <code>post:{id}</code> (<code>post.liked/unliked/viewed</code>,
+      <code>comment.created/liked</code>); <code>user:{id}</code> (<code>notification.created</code>).</li>
+      <li><strong>Wire the seams left in task-008/009/010:</strong> each service calls
+      <code>hub.broadcast(...)</code> post-commit. Server→client envelope
+      <code>{ topic, event, data, ts }</code>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li>A WS client can subscribe to <code>feed:global</code> and receives
+      <code>post.created</code> when a post is created (via REST or sim).</li>
+      <li><code>post:{id}</code> receives like/comment/view events with fresh counts.</li>
+      <li><code>user:{id}</code> requires auth at upgrade; rejects without a session.</li>
+      <li>Broadcasts fire only after the DB commit (no event for a rolled-back write).</li>
+      <li>Unsubscribe + disconnect clean up the hub's sets (no leaks).</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Tests — WS script (Bruno can't do sockets)</h2></div>
+    <p>Bruno doesn't cover WebSockets, so ship a tiny <code>scripts/ws-smoke.ts</code> run with
+    <code>bun</code>: open a socket, subscribe to <code>feed:global</code>, create a post via
+    <code>fetch</code> (with the auth cookie), and assert a <code>post.created</code> event
+    arrives within a timeout (exit non-zero on failure). Document
+    <code>bun run scripts/ws-smoke.ts</code> in the README. REST regressions still go through
+    the existing Bruno folders.</p>
+  </section>
+
+  <footer>MockStack · task-011 · build order milestone 6 (Realtime)</footer>
+</div>
+</body>
+</html>

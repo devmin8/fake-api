@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-003 — Seed data</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-003</div>
+    <h1>Seed data</h1>
+    <p class="tagline">A faker-powered seed that fills the DB with believable users (incl.
+    bots), posts, comments, tags, follows, and likes — so every read endpoint built next has
+    real relational data to return.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/db/seed.ts</code> using <code>@faker-js/faker</code>. Script
+      <code>db:seed</code>.</li>
+      <li>Seed: ~20 real users + a handful of <code>is_bot=true</code> bot users (used later
+      by the firehose); a fixed, known <strong>test user</strong> whose credentials match
+      <code>testEmail</code>/<code>testPassword</code> in the Bruno env (so login tests work).</li>
+      <li>~15 tags (name + slug); ~80 posts across users with random tags, some with
+      <code>image_url</code> placeholders; threaded comments; a spread of likes, follows,
+      bookmarks. Keep denormalized counts consistent with the rows created.</li>
+      <li>Idempotent-ish: a <code>--fresh</code> path that wipes + reseeds is fine; document
+      whichever you choose.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li><code>bun run db:seed</code> populates all tables without FK errors.</li>
+      <li>The known test user exists and its <code>password_hash</code> verifies against the
+      Bruno test password (validated for real in task-004).</li>
+      <li>Denormalized counts match actual child rows (spot-check one post).</li>
+      <li>At least a few posts have <code>image_url</code> set.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests</h2></div>
+    <p>No endpoints yet. The deliverable that unblocks Bruno is the <strong>known test
+    user</strong> — its credentials must equal the <code>local</code> environment's
+    <code>testEmail</code>/<code>testPassword</code> so task-004's login test authenticates.</p>
+  </section>
+
+  <footer>MockStack · task-003 · build order milestone 2 (Seed)</footer>
+</div>
+</body>
+</html>

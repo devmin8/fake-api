@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-006 — Comments: threaded reads</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-006</div>
+    <h1>Comments: threaded reads</h1>
+    <p class="tagline">Public, paginated reads of a post's comments and the replies under a
+    comment — reusing the same cursor engine, returning the same envelope.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/routes/comments.ts</code> (reads only):
+        <ul>
+          <li><code>GET /api/posts/:id/comments</code> — top-level comments for a post
+          (<code>parent_id IS NULL</code>), paginated + threaded shape (include reply counts
+          or a small first page of replies as you prefer; document it).</li>
+          <li><code>GET /api/comments/:id/replies</code> — the thread under one comment.</li>
+        </ul>
+      </li>
+      <li>Reuse <code>cursor.ts</code> + the collection envelope from task-005.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li>Comments list returns the envelope; cursor paginates correctly.</li>
+      <li>Replies endpoint returns only children of the given comment.</li>
+      <li>404 for a non-existent post/comment id.</li>
+      <li>Threading is coherent (parent/child relationship visible in the payload).</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests — <code>04-comments-read/</code></h2></div>
+    <p>Public. Use the <code>postId</code> captured in <code>03-posts-read</code> (env var
+    persists across folders) to fetch comments; capture a <code>commentId</code> from the
+    response and fetch its replies. Add a 404 case for both endpoints.</p>
+  </section>
+
+  <footer>MockStack · task-006 · build order milestone 4 (Core reads)</footer>
+</div>
+</body>
+</html>

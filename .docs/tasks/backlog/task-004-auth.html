@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-004 — Auth &amp; sessions</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-004</div>
+    <h1>Auth &amp; sessions</h1>
+    <p class="tagline">Cookie-based JWT auth: register, login, refresh (with rotation),
+    logout, me. Cookie helpers, the JWT guard, the CSRF toggle, and the ownership macro that
+    every write/owner route will lean on.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Scope</h2></div>
+    <ul>
+      <li><code>src/lib/auth.ts</code> — JWT sign/verify (<code>@elysiajs/jwt</code>),
+      <code>Bun.password</code> hash/verify, opaque refresh-token generation + hashing.</li>
+      <li><code>src/lib/cookies.ts</code> — set/clear helpers with correct flags per the
+      design (<code>access_token</code> httpOnly·Secure·Lax·Path=/; <code>refresh_token</code>
+      httpOnly·Secure·Lax·Path=/auth/refresh; <code>csrf_token</code> JS-readable).</li>
+      <li><code>src/lib/csrf.ts</code> — double-submit check, gated by <code>CSRF_ENABLED</code>.</li>
+      <li><code>src/plugins/auth-guard.ts</code> — derive <code>user</code> from the access
+      cookie; <code>.auth()</code> macro (401 if missing/expired) and <code>.owner()</code>
+      helper for ownership checks.</li>
+      <li><code>src/routes/auth.ts</code> — <code>POST /api/auth/register</code>,
+      <code>/login</code>, <code>/refresh</code> (validate vs stored hash, <strong>rotate</strong>:
+      issue new refresh + revoke old, re-issue access), <code>/logout</code> (revoke + clear),
+      <code>GET /api/auth/me</code>.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li>Register → 3 cookies set, user object returned.</li>
+      <li>Login with the seeded test user → cookies set, 200.</li>
+      <li><code>GET /me</code> with the session → current user; without it → 401.</li>
+      <li>Refresh rotates the token (old refresh no longer valid) and re-issues access.</li>
+      <li>Logout revokes the refresh row and clears cookies.</li>
+      <li>With <code>CSRF_ENABLED=true</code>, a mutating request missing
+      <code>X-CSRF-Token</code> is rejected; with the header it passes.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Bruno tests — <code>02-auth/</code></h2></div>
+    <p>This folder is the keystone of the whole suite (see
+    <a href="../bruno-testing-plan.html">bruno-testing-plan.html</a>). Requests in
+    <code>seq</code> order:</p>
+    <ul>
+      <li><code>register</code> (seq 10) — create or 409 if exists; tolerate either since the
+      seed already made the test user.</li>
+      <li><code>login</code> (seq 20) — parse <code>Set-Cookie</code>, stash
+      <code>accessToken</code>/<code>refreshToken</code>/<code>csrfToken</code> as env vars.
+      <strong>This is what authenticates every later folder.</strong></li>
+      <li><code>me</code> (seq 30) — 200, returns the test user.</li>
+      <li><code>me-unauthed</code> (seq 35) — clear cookie header, assert 401 +
+      <code>error.code = UNAUTHENTICATED</code>.</li>
+      <li><code>refresh</code> (seq 40) — 200, new cookies; re-stash.</li>
+      <li><code>logout</code> (seq 90) — 200, then clears the env vars in post-response.
+      Keep this last so other folders still have a session during a full run — i.e. logout
+      lives here but the suite's write folders run before it only if ordered so; simplest is
+      to <strong>re-login</strong> at the top of any folder that needs it, or keep logout as
+      its own final folder. Document the choice in the collection.</li>
+    </ul>
+    <div class="note warn"><span class="lbl">Ordering note</span>
+    Because folders run alphabetically, <code>02-auth</code> runs before write folders — good.
+    But if <code>logout</code> sits in <code>02-auth</code>, it would wipe auth before writes
+    run. Resolution: put <code>logout</code> in its own trailing folder (e.g.
+    <code>99-teardown/</code>), or re-login via the collection pre-request if
+    <code>accessToken</code> is unset. Pick one and note it in <code>collection.bru</code>.</div>
+  </section>
+
+  <footer>MockStack · task-004 · build order milestone 3 (Auth)</footer>
+</div>
+</body>
+</html>
