@@ -1,0 +1,16 @@
+meta {
+  name: Comment Delete
+  type: http
+  seq: 100
+}
+
+delete {
+  url: {{baseUrl}}/api/comments/{{writeCommentId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.ok: eq true
+}

@@ -12,8 +12,8 @@
 
 import { type SQL, and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 
-import { db } from "~/db/index.ts";
-import { comments, posts } from "~/db/schema.ts";
+import { db, sqlite } from "~/db/index.ts";
+import { comments, likes, posts } from "~/db/schema.ts";
 import {
   type Cursor,
   type Direction,
@@ -22,6 +22,7 @@ import {
   toEnvelope,
 } from "~/lib/cursor.ts";
 import { errors } from "~/lib/errors.ts";
+import { newId } from "~/lib/ids.ts";
 
 export interface CommentAuthor {
   id: string;
@@ -169,4 +170,101 @@ export async function listCommentReplies(
   if (!parent) throw errors.notFound("Comment not found");
 
   return paginateComments([eq(comments.parentId, commentId)], params);
+}
+
+// --- Writes -----------------------------------------------------------------
+// Shared write path for comments. createComment bumps the post's denormalized
+// comment_count in the same transaction as the insert, so the count and the
+// rows can never drift. Broadcasts hook in at task-011.
+
+export interface CreateCommentInput {
+  body: string;
+  // Optional: reply under an existing comment on the same post (null = top-level).
+  parentId?: string | null;
+}
+
+export async function createComment(
+  postId: string,
+  authorId: string,
+  input: CreateCommentInput,
+): Promise<PublicComment> {
+  const post = db
+    .select({ id: posts.id })
+    .from(posts)
+    .where(eq(posts.id, postId))
+    .get();
+  if (!post) throw errors.notFound("Post not found");
+
+  const parentId = input.parentId ?? null;
+  if (parentId) {
+    const parent = db
+      .select({ postId: comments.postId })
+      .from(comments)
+      .where(eq(comments.id, parentId))
+      .get();
+    if (!parent || parent.postId !== postId) {
+      throw errors.validation("parentId must reference a comment on this post");
+    }
+  }
+
+  const id = newId();
+  const createdAt = new Date().toISOString();
+
+  db.transaction((tx) => {
+    tx.insert(comments)
+      .values({ id, postId, authorId, parentId, body: input.body, createdAt })
+      .run();
+    tx.update(posts)
+      .set({ commentCount: sql`${posts.commentCount} + 1` })
+      .where(eq(posts.id, postId))
+      .run();
+  });
+
+  const row = (await db.query.comments.findFirst({
+    where: eq(comments.id, id),
+    with: commentWith,
+  })) as HydratedComment;
+  return toPublicComment(row, 0);
+}
+
+// Delete a comment the caller owns. Replies cascade via the parent_id FK; their
+// polymorphic likes have no FK so we clear the whole subtree's likes by hand,
+// and decrement the post's comment_count by the subtree size — every comment,
+// reply included, bumped it by one on creation.
+export async function deleteComment(id: string, userId: string): Promise<void> {
+  const existing = db
+    .select({ authorId: comments.authorId, postId: comments.postId })
+    .from(comments)
+    .where(eq(comments.id, id))
+    .get();
+  if (!existing) throw errors.notFound("Comment not found");
+  if (existing.authorId !== userId) throw errors.forbidden();
+
+  // The comment plus every descendant reply the cascade will remove.
+  const subtreeIds = sqlite
+    .query<{ id: string }, [string]>(
+      `WITH RECURSIVE sub(id) AS (
+         SELECT id FROM comments WHERE id = ?
+         UNION ALL
+         SELECT c.id FROM comments c JOIN sub ON c.parent_id = sub.id
+       )
+       SELECT id FROM sub`,
+    )
+    .all(id)
+    .map((r) => r.id);
+
+  db.transaction((tx) => {
+    tx.delete(likes)
+      .where(
+        and(eq(likes.targetType, "comment"), inArray(likes.targetId, subtreeIds)),
+      )
+      .run();
+    tx.delete(comments).where(eq(comments.id, id)).run();
+    tx.update(posts)
+      .set({
+        commentCount: sql`max(0, ${posts.commentCount} - ${subtreeIds.length})`,
+      })
+      .where(eq(posts.id, existing.postId))
+      .run();
+  });
 }

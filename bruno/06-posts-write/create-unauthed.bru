@@ -1,0 +1,28 @@
+meta {
+  name: Create Unauthed
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/posts
+  body: json
+  auth: none
+}
+
+body:json {
+  { "title": "Should not be created", "body": "No session here." }
+}
+
+script:pre-request {
+  // The collection pre-request injected alice's auth cookie. Clobber it with a
+  // cookie that carries no access_token so the request arrives unauthenticated —
+  // the auth guard 401s before any CSRF/body work. Body is valid on purpose, so
+  // we're asserting the auth boundary (401), not a validation error (422).
+  req.setHeader('Cookie', 'x=1');
+}
+
+assert {
+  res.status: eq 401
+  res.body.error.code: eq UNAUTHENTICATED
+}

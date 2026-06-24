@@ -1,0 +1,28 @@
+meta {
+  name: Delete Not Owner
+  type: http
+  seq: 75
+}
+
+delete {
+  url: {{baseUrl}}/api/posts/{{writePostId}}
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // Same per-request swap to bob as patch-not-owner: a valid non-owner session,
+  // so the service 403s. alice's post survives for the rest of the chain.
+  const access = bru.getEnvVar('secondAccessToken');
+  const csrf   = bru.getEnvVar('secondCsrfToken');
+  const parts = [];
+  if (access) parts.push(`access_token=${access}`);
+  if (csrf)   parts.push(`csrf_token=${csrf}`);
+  req.setHeader('Cookie', parts.join('; '));
+  if (csrf) req.setHeader('X-CSRF-Token', csrf);
+}
+
+assert {
+  res.status: eq 403
+  res.body.error.code: eq FORBIDDEN
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Detail
+  type: http
+  seq: 40
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{writePostId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: eq {{writePostId}}
+  res.body.title: eq Bruno write-path post
+  res.body.body: eq Created by the 06-posts-write suite.
+  res.body.author.username: eq alice
+  res.body.tags: isArray
+}

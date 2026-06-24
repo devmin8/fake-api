@@ -1,0 +1,39 @@
+meta {
+  name: Login Second User
+  type: http
+  seq: 62
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  { "email": "bob@example.com", "password": "password123" }
+}
+
+script:post-response {
+  // Capture bob's session into SEPARATE env vars. We deliberately do NOT touch
+  // accessToken/csrfToken (alice's) — the collection pre-request keeps injecting
+  // alice everywhere, and only the ownership-violation requests below swap in
+  // these `second*` vars. So there's nothing to "restore" afterwards.
+  const raw = res.headers['set-cookie'] || [];
+  const cookies = Array.isArray(raw) ? raw : [raw];
+  const pick = (name) => {
+    const hit = cookies.find(c => c.startsWith(name + '='));
+    return hit ? hit.split(';')[0].split('=').slice(1).join('=') : null;
+  };
+  const access  = pick('access_token');
+  const refresh = pick('refresh_token');
+  const csrf    = pick('csrf_token');
+  if (access)  bru.setEnvVar('secondAccessToken', access);
+  if (refresh) bru.setEnvVar('secondRefreshToken', refresh);
+  if (csrf)    bru.setEnvVar('secondCsrfToken', csrf);
+}
+
+assert {
+  res.status: eq 200
+  res.body.email: eq bob@example.com
+}

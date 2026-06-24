@@ -1,0 +1,33 @@
+meta {
+  name: Register Second User
+  type: http
+  seq: 60
+}
+
+post {
+  url: {{baseUrl}}/api/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "username": "bob",
+    "email": "bob@example.com",
+    "password": "password123",
+    "displayName": "Bob"
+  }
+}
+
+tests {
+  // Fresh DB → 201; a re-run (or seeded bob) → 409. Login-second next reliably
+  // (re)acquires bob's session either way, so we don't depend on this response.
+  test("register second user: created (201) or already exists (409)", function () {
+    expect(res.getStatus()).to.be.oneOf([201, 409]);
+  });
+}
+
+docs {
+  A throwaway second user, used only to prove the OWNER boundary (403) on
+  alice's post. Register tolerates 409; the real session comes from login-second.
+}

@@ -1,0 +1,29 @@
+meta {
+  name: Comment Create
+  type: http
+  seq: 80
+}
+
+post {
+  url: {{baseUrl}}/api/posts/{{writePostId}}/comments
+  body: json
+  auth: none
+}
+
+body:json {
+  { "body": "First comment from the write suite." }
+}
+
+script:post-response {
+  bru.setEnvVar('writeCommentId', res.body.id);
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.postId: eq {{writePostId}}
+  res.body.parentId: isNull
+  res.body.body: eq First comment from the write suite.
+  res.body.replyCount: eq 0
+  res.body.author.username: eq alice
+}

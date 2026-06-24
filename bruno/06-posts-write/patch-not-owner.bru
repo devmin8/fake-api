@@ -1,0 +1,33 @@
+meta {
+  name: Patch Not Owner
+  type: http
+  seq: 70
+}
+
+patch {
+  url: {{baseUrl}}/api/posts/{{writePostId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  { "title": "bob should not be able to edit this" }
+}
+
+script:pre-request {
+  // Swap alice's injected session for bob's, for THIS request only. The auth
+  // guard sees a valid (bob) session, so it's not a 401 — the service then
+  // 403s because bob doesn't own the post.
+  const access = bru.getEnvVar('secondAccessToken');
+  const csrf   = bru.getEnvVar('secondCsrfToken');
+  const parts = [];
+  if (access) parts.push(`access_token=${access}`);
+  if (csrf)   parts.push(`csrf_token=${csrf}`);
+  req.setHeader('Cookie', parts.join('; '));
+  if (csrf) req.setHeader('X-CSRF-Token', csrf);
+}
+
+assert {
+  res.status: eq 403
+  res.body.error.code: eq FORBIDDEN
+}

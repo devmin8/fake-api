@@ -1,0 +1,31 @@
+meta {
+  name: Patch
+  type: http
+  seq: 50
+}
+
+patch {
+  url: {{baseUrl}}/api/posts/{{writePostId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Bruno write-path post (edited)",
+    "tags": ["React"]
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: eq {{writePostId}}
+  res.body.title: eq Bruno write-path post (edited)
+}
+
+tests {
+  test("tags fully replaced by the patch", function () {
+    const slugs = res.body.tags.map(t => t.slug);
+    expect(slugs).to.deep.equal(['react']);
+  });
+}

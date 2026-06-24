@@ -1,0 +1,20 @@
+meta {
+  name: Comment Post Not Found
+  type: http
+  seq: 95
+}
+
+post {
+  url: {{baseUrl}}/api/posts/01KVZZZZZZZZZZZZZZZZZZZZZZ/comments
+  body: json
+  auth: none
+}
+
+body:json {
+  { "body": "commenting on a post that doesn't exist" }
+}
+
+assert {
+  res.status: eq 404
+  res.body.error.code: eq NOT_FOUND
+}

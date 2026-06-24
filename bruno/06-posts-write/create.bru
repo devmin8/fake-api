@@ -1,0 +1,43 @@
+meta {
+  name: Create
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{baseUrl}}/api/posts
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "Bruno write-path post",
+    "body": "Created by the 06-posts-write suite.",
+    "imageUrl": "https://picsum.photos/seed/bruno/800/600",
+    "tags": ["Bun", "Bruno Test Tag"]
+  }
+}
+
+script:post-response {
+  // Hand the new id to the chained requests below. Never hardcode — ULIDs shift.
+  bru.setEnvVar('writePostId', res.body.id);
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.title: eq Bruno write-path post
+  res.body.imageUrl: eq https://picsum.photos/seed/bruno/800/600
+  res.body.likeCount: eq 0
+  res.body.commentCount: eq 0
+  res.body.author.username: eq alice
+  res.body.tags: isArray
+}
+
+tests {
+  test("tags resolved: existing 'Bun' reused, new tag created", function () {
+    const slugs = res.body.tags.map(t => t.slug);
+    expect(slugs).to.include.members(['bun', 'bruno-test-tag']);
+  });
+}

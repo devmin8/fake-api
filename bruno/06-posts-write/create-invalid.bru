@@ -1,0 +1,26 @@
+meta {
+  name: Create Invalid
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/api/posts
+  body: json
+  auth: none
+}
+
+body:json {
+  { "title": "", "body": "x" }
+}
+
+assert {
+  res.status: eq 422
+  res.body.error.code: eq VALIDATION_ERROR
+}
+
+docs {
+  Authenticated (collection injects alice's session) but the body is invalid —
+  an empty title. Body validation runs before the auth guard's beforeHandle, so
+  this is a clean 422 even with a live session.
+}

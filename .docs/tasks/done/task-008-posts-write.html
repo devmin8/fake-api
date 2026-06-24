@@ -65,6 +65,35 @@
     user's vars. Document the swap in the request's pre/post scripts.</div>
   </section>
 
+  <section>
+    <div class="sec-head"><span class="sec-num">✱</span><h2>Handoff notes</h2></div>
+    <ul>
+      <li><b>Run Bruno with <code>--disable-cookies</code> from now on</b>
+      (<code>cd bruno &amp;&amp; bru run --env local --disable-cookies</code>). Bruno CLI 3.5.x
+      enabled an on-by-default cookie jar — the reverse of what the testing plan assumed.
+      With the jar on, the new boundary tests can't work: the unauthenticated-401 test can't
+      strip auth and the ownership-403 test can't swap to a second user, because the jar keeps
+      re-injecting the last session; worse, a partly-failed write run leaks rows that poison
+      the next run's reads. Disabling the jar makes the manual capture/replay authoritative
+      again. CLAUDE.md + bruno-testing-plan.html (§07/§08) updated to match.</li>
+      <li><b>Ownership swap needs no "restore".</b> The 403 tests stash a second user's
+      tokens in separate <code>second*</code> env vars and override <code>Cookie</code>/
+      <code>X-CSRF-Token</code> only on the violation requests; the collection pre-request keeps
+      injecting the primary user everywhere else. The second user is acquired via
+      register (tolerate 409) <em>then</em> a real login, so re-runs are stable.</li>
+      <li><b>Service layering:</b> ownership (403) and existence (404) are enforced inside the
+      services (<code>updatePost</code>/<code>deletePost</code>/<code>deleteComment</code> take
+      the acting <code>userId</code>), not via the <code>owner()</code> route decorator — the
+      row's author isn't known until the service fetches it, and this keeps the write path the
+      single point of enforcement for the firehose too.</li>
+      <li><b>Polymorphic likes have no FK</b> (<code>target_id</code> spans posts+comments), so
+      cascades don't reach them. <code>deletePost</code>/<code>deleteComment</code> delete the
+      affected likes by hand inside the same transaction; <code>deleteComment</code> walks the
+      reply subtree with a recursive CTE to clean likes and decrement <code>comment_count</code>
+      by the full subtree size.</li>
+    </ul>
+  </section>
+
   <footer>fake-api · task-008 · build order milestone 5 (Core writes)</footer>
 </div>
 </body>

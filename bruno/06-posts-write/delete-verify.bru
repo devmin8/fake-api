@@ -1,0 +1,20 @@
+meta {
+  name: Delete Verify
+  type: http
+  seq: 115
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{writePostId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+  res.body.error.code: eq NOT_FOUND
+}
+
+docs {
+  The post deleted in seq 110 is gone — fetching it now 404s.
+}

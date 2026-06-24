@@ -1,0 +1,23 @@
+meta {
+  name: List Shows It
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrl}}/api/posts?author=alice&limit=20
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+}
+
+tests {
+  test("the just-created post appears in alice's posts", function () {
+    const ids = res.body.data.map(p => p.id);
+    expect(ids).to.include(bru.getEnvVar('writePostId'));
+  });
+}

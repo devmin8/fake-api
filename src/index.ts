@@ -12,7 +12,7 @@ import { ApiError, type ErrorEnvelope } from "~/lib/errors.ts";
 import { authRoutes } from "~/routes/auth.ts";
 import {
   commentRoutes,
-  postCommentReadRoutes,
+  postCommentRoutes,
 } from "~/routes/comments.ts";
 import { postRoutes } from "~/routes/posts.ts";
 import { tagRoutes } from "~/routes/tags.ts";
@@ -72,7 +72,7 @@ const app = new Elysia()
     detail: { summary: "Liveness probe", tags: ["meta"] },
   })
   .use(authRoutes)
-  .use(postRoutes.use(postCommentReadRoutes))
+  .use(postRoutes.use(postCommentRoutes))
   .use(commentRoutes)
   .use(userRoutes)
   .use(tagRoutes)

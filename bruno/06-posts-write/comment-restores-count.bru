@@ -1,0 +1,21 @@
+meta {
+  name: Comment Restores Count
+  type: http
+  seq: 105
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{writePostId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.commentCount: eq 0
+}
+
+docs {
+  Deleting the only comment (seq 100) must decrement comment_count back to 0 —
+  proves create→delete keeps the denormalized count consistent.
+}

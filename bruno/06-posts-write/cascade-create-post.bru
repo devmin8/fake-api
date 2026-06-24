@@ -1,0 +1,30 @@
+meta {
+  name: Cascade Create Post
+  type: http
+  seq: 120
+}
+
+post {
+  url: {{baseUrl}}/api/posts
+  body: json
+  auth: none
+}
+
+body:json {
+  { "title": "Cascade probe post", "body": "Will be deleted with a live comment on it." }
+}
+
+script:post-response {
+  bru.setEnvVar('cascadePostId', res.body.id);
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+}
+
+docs {
+  Sets up the cascade check: this post gets a comment (seq 125), then is deleted
+  (seq 130) WITHOUT first deleting the comment, so seq 135 can prove the comment
+  was removed by the FK cascade.
+}

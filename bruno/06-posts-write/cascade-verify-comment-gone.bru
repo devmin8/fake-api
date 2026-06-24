@@ -1,0 +1,22 @@
+meta {
+  name: Cascade Verify Comment Gone
+  type: http
+  seq: 135
+}
+
+get {
+  url: {{baseUrl}}/api/comments/{{cascadeCommentId}}/replies
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+  res.body.error.code: eq NOT_FOUND
+}
+
+docs {
+  The comment's parent post was deleted in seq 130 without deleting the comment
+  first. Asking for the comment's replies now 404s ("Comment not found") —
+  proving comments cascade away with their post.
+}

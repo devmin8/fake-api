@@ -13,7 +13,7 @@
 import { and, asc, desc, eq, gt, inArray, lt, or, sql } from "drizzle-orm";
 
 import { db } from "~/db/index.ts";
-import { postTags, posts, tags, users } from "~/db/schema.ts";
+import { comments, likes, postTags, posts, tags, users } from "~/db/schema.ts";
 import {
   type Cursor,
   type Direction,
@@ -23,6 +23,7 @@ import {
   toEnvelope,
 } from "~/lib/cursor.ts";
 import { errors } from "~/lib/errors.ts";
+import { newId } from "~/lib/ids.ts";
 
 export type Sort = "new" | "top" | "trending";
 
@@ -255,4 +256,153 @@ export async function postUpdates(since: string): Promise<PostUpdates> {
     newestCursor,
     previews: newer.slice(0, 5),
   };
+}
+
+// --- Writes -----------------------------------------------------------------
+// Every post mutation funnels through these so routes stay thin and the
+// firehose (task-013) drives the exact same path — simulated and real data
+// never diverge. Broadcasts hook in at task-011; each service already returns
+// the full public row a broadcaster will need, so that wiring is a clean add.
+
+export interface CreatePostInput {
+  title: string;
+  body: string;
+  imageUrl?: string | null;
+  tags?: string[];
+}
+
+export interface UpdatePostInput {
+  title?: string;
+  body?: string;
+  imageUrl?: string | null;
+  tags?: string[];
+}
+
+// Mirror the seed's slugify so a tag created here collides with a seeded one of
+// the same name — tags.slug is unique, so find-or-create keys on the slug.
+const slugify = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+// Link a post to a set of tag names inside `tx`, creating any tag that doesn't
+// exist yet (find-or-create by slug). De-duped per call so one post can't
+// double-link a tag; blank/punctuation-only names slug to "" and are skipped.
+const linkTags = (tx: any, postId: string, names: string[]): void => {
+  const seen = new Set<string>();
+  for (const name of names) {
+    const slug = slugify(name);
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+    let tag = tx
+      .select({ id: tags.id })
+      .from(tags)
+      .where(eq(tags.slug, slug))
+      .get();
+    if (!tag) {
+      const id = newId();
+      tx.insert(tags).values({ id, name, slug }).run();
+      tag = { id };
+    }
+    tx.insert(postTags).values({ postId, tagId: tag.id }).run();
+  }
+};
+
+export async function createPost(
+  authorId: string,
+  input: CreatePostInput,
+): Promise<PublicPost> {
+  const id = newId();
+  const now = new Date().toISOString();
+
+  db.transaction((tx) => {
+    tx.insert(posts)
+      .values({
+        id,
+        authorId,
+        title: input.title,
+        body: input.body,
+        imageUrl: input.imageUrl ?? null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+    if (input.tags?.length) linkTags(tx, id, input.tags);
+  });
+
+  const [post] = await hydrate([id]);
+  return post;
+}
+
+export async function updatePost(
+  id: string,
+  userId: string,
+  input: UpdatePostInput,
+): Promise<PublicPost> {
+  const existing = db
+    .select({ authorId: posts.authorId })
+    .from(posts)
+    .where(eq(posts.id, id))
+    .get();
+  if (!existing) throw errors.notFound("Post not found");
+  if (existing.authorId !== userId) throw errors.forbidden();
+
+  const now = new Date().toISOString();
+
+  db.transaction((tx) => {
+    const set: Record<string, unknown> = { updatedAt: now };
+    if (input.title !== undefined) set.title = input.title;
+    if (input.body !== undefined) set.body = input.body;
+    if (input.imageUrl !== undefined) set.imageUrl = input.imageUrl;
+    tx.update(posts).set(set).where(eq(posts.id, id)).run();
+
+    // tags omitted → left untouched; tags present (even []) → full replace.
+    if (input.tags !== undefined) {
+      tx.delete(postTags).where(eq(postTags.postId, id)).run();
+      if (input.tags.length) linkTags(tx, id, input.tags);
+    }
+  });
+
+  const [post] = await hydrate([id]);
+  return post;
+}
+
+// Delete a post the caller owns. FK ON DELETE CASCADE clears its comments,
+// post_tags and bookmarks; likes are polymorphic (no FK on target_id), so we
+// remove them by hand — for the post itself and for every comment about to
+// cascade away — inside the same transaction.
+export async function deletePost(id: string, userId: string): Promise<void> {
+  const existing = db
+    .select({ authorId: posts.authorId })
+    .from(posts)
+    .where(eq(posts.id, id))
+    .get();
+  if (!existing) throw errors.notFound("Post not found");
+  if (existing.authorId !== userId) throw errors.forbidden();
+
+  db.transaction((tx) => {
+    const commentIds = tx
+      .select({ id: comments.id })
+      .from(comments)
+      .where(eq(comments.postId, id))
+      .all()
+      .map((r: { id: string }) => r.id);
+
+    tx.delete(likes)
+      .where(and(eq(likes.targetType, "post"), eq(likes.targetId, id)))
+      .run();
+    if (commentIds.length) {
+      tx.delete(likes)
+        .where(
+          and(
+            eq(likes.targetType, "comment"),
+            inArray(likes.targetId, commentIds),
+          ),
+        )
+        .run();
+    }
+
+    tx.delete(posts).where(eq(posts.id, id)).run();
+  });
 }

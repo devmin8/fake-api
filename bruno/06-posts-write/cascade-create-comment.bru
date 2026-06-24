@@ -1,0 +1,24 @@
+meta {
+  name: Cascade Create Comment
+  type: http
+  seq: 125
+}
+
+post {
+  url: {{baseUrl}}/api/posts/{{cascadePostId}}/comments
+  body: json
+  auth: none
+}
+
+body:json {
+  { "body": "I should be cascade-deleted when my post is deleted." }
+}
+
+script:post-response {
+  bru.setEnvVar('cascadeCommentId', res.body.id);
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+}

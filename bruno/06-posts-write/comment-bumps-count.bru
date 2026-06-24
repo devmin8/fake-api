@@ -1,0 +1,21 @@
+meta {
+  name: Comment Bumps Count
+  type: http
+  seq: 85
+}
+
+get {
+  url: {{baseUrl}}/api/posts/{{writePostId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.commentCount: eq 1
+}
+
+docs {
+  The post was created with commentCount 0; one comment was added in seq 80, so
+  the denormalized count must now read 1 (bumped in the same transaction).
+}

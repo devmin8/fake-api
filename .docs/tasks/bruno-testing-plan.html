@@ -186,21 +186,34 @@ script:pre-request {
     <div class="sec-head"><span class="sec-num">07</span><h2>Running headless (CI / quick check)</h2></div>
 <pre>npm install -g @usebruno/cli      <span class="c"># or: npx @usebruno/cli</span>
 cd bruno
-bru run --env local                       <span class="c"># whole suite, in order</span>
-bru run 06-posts-write --env local        <span class="c"># one folder</span>
-bru run --env local --reporter-junit out/results.xml</pre>
-    <p>Non-zero exit on any failed assertion, so it gates a pipeline directly. Folders run
-    alphabetically and requests by <code>seq</code>, so <code>02-auth</code> logs in before
-    the write folders.</p>
+bru run --env local --disable-cookies                  <span class="c"># whole suite, in order</span>
+bru run --env local --disable-cookies --reporter-junit out/results.xml</pre>
+    <p><strong>Always pass <code>--disable-cookies</code>.</strong> Recent Bruno CLIs
+    (3.5.x) ship an <em>on-by-default</em> cookie jar that auto-saves
+    <code>Set-Cookie</code> — the opposite of the older behavior this plan was built
+    around. With the jar on, our manual cookie replay can't <em>strip</em> auth (the
+    unauthenticated-401 boundary) or <em>swap</em> users (the ownership-403 boundary),
+    and a partly-failed write run leaks rows that pollute the next run's reads.
+    Disabling the jar makes the manual capture/replay below the single source of truth,
+    so the suite behaves identically in the app and the CLI. Run the <em>whole</em> suite
+    (not a lone write folder) so <code>02-auth</code> logs in first — folders run
+    alphabetically and requests by <code>seq</code>.</p>
+    <p>Non-zero exit on any failed assertion, so it gates a pipeline directly.</p>
   </section>
 
   <section id="gotchas">
     <div class="sec-head"><span class="sec-num">08</span><h2>Gotchas (don't relearn these)</h2></div>
     <ol class="spaced">
-      <li>CLI won't save 2xx <code>Set-Cookie</code> — we capture + replay manually. Never
-      assume the jar.</li>
-      <li><code>jar.getCookie(…)</code> is <strong>async</strong> — but we avoid the jar
-      entirely and read <code>res.headers['set-cookie']</code>, which works everywhere.</li>
+      <li>Run with <code>--disable-cookies</code> (see §07). The CLI's jar behavior flipped
+      across versions — old CLIs didn't save 2xx <code>Set-Cookie</code>, 3.5.x saves it by
+      default. We sidestep the whole question: capture + replay cookies manually and turn the
+      jar off, so auth is deterministic regardless of CLI version.</li>
+      <li>We never read from the jar — we read <code>res.headers['set-cookie']</code> on
+      login and replay it via the collection pre-request, which works everywhere.</li>
+      <li>Boundary tests override the injected auth <em>per request</em>:
+      <code>req.setHeader('Cookie', 'x=1')</code> for the unauthenticated 401, or a second
+      user's captured tokens for the ownership 403. With the jar off these overrides actually
+      take effect; with it on they don't.</li>
       <li>Folders order <strong>alphabetically</strong> — keep the numeric prefixes.</li>
       <li>Leave <code>seq</code> gaps within a folder.</li>
       <li>WebSocket topics aren't covered by Bruno — the realtime task ships a tiny
