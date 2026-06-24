@@ -114,7 +114,7 @@ for (let i = 0; i < BOT_USERS; i++) {
   const username = uniqueUsername(`bot ${faker.hacker.noun()} ${i}`);
   pushUser({
     username,
-    email: `${username}@bots.mockstack.local`,
+    email: `${username}@bots.fake-api.local`,
     displayName: `${faker.hacker.adjective()} bot`,
     isBot: true,
     createdMs: now - 80 * DAY,

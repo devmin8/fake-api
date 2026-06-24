@@ -1,4 +1,4 @@
-// MockStack API entry point.
+// fake-api entry point.
 // Mounts plugins (CORS, Swagger), the global error envelope, and the routes.
 // Later tickets add DB, auth, the realtime hub, and the simulator here.
 
@@ -21,7 +21,7 @@ const app = new Elysia()
       path: "/docs",
       documentation: {
         info: {
-          title: "MockStack API",
+          title: "fake-api",
           version: "0.1.0",
           description:
             "Self-hosted relational + realtime mock backend (Bun · Elysia).",
@@ -66,7 +66,7 @@ const app = new Elysia()
   .listen(config.port);
 
 console.log(
-  `🚀 MockStack API listening on http://${app.server?.hostname}:${app.server?.port}` +
+  `🚀 fake-api listening on http://${app.server?.hostname}:${app.server?.port}` +
     `  ·  docs at /docs`,
 );
 

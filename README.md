@@ -1,4 +1,4 @@
-# MockStack API
+# fake-api
 
 A self-hosted, fully relational, real-time **mock backend** — a permanent practice ground for
 building any frontend against real auth, real data, and a live event stream. Unlike

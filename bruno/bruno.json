@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "name": "MockStack API",
+  "name": "fake-api",
   "type": "collection",
   "ignore": ["node_modules", ".git"],
   "scripts": {

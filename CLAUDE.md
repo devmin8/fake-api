@@ -1,4 +1,4 @@
-# MockStack API — Claude working notes
+# fake-api — Claude working notes
 
 A self-hosted relational + realtime mock backend. **Bun · Elysia · Drizzle · bun:sqlite ·
 native WebSockets · cookie-JWT auth.** Full spec: [`.docs/system-design.html`](.docs/system-design.html).
