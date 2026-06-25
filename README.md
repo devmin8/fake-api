@@ -23,6 +23,28 @@ Or with Docker (`SEED_ON_START=true` seeds demo data + bots on first boot):
 docker run -p 3000:3000 -e SEED_ON_START=true -v fake-api-data:/data ghcr.io/devmin8/fake-api:latest
 ```
 
+### Public HTTPS URL with [portless](https://portless.sh)
+
+Get a real `https://` URL (handy for OAuth callbacks, mobile testing, or sharing) instead of
+`localhost:3000`. portless wraps the process, auto-detects its port, and serves it at
+`https://fake-api.localhost` (name inferred from `package.json`):
+
+```bash
+portless run bun dev                  # wraps `bun run dev`; URL → https://fake-api.localhost
+```
+
+For the Docker image, portless can't auto-detect the port (Docker's proxy opens the socket, not
+the wrapped process) — publish the port with `-p` and pin it with `--app-port`:
+
+```bash
+portless run --app-port 3000 \
+  docker run --rm -p 3000:3000 -e SEED_ON_START=true -v fake-api-data:/data \
+  ghcr.io/devmin8/fake-api:latest
+```
+
+Serving a frontend through portless too? Point its API calls at `https://fake-api.localhost` and
+set `CORS_ORIGIN` to that frontend's portless URL so cross-origin requests + auth cookies work.
+
 ## API at a glance
 
 Reads are public; writes need a session (🔒). Browse signed-out, write signed-in.
