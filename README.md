@@ -30,8 +30,13 @@ Built ticket-by-ticket. The current task is whatever
 ```bash
 bun install
 bun run db:migrate && bun run db:seed
-bun run dev                          # API on $PORT (REST + ws://…/ws)
-cd bruno && bru run --env local      # run the API test suite
+bun run dev                          # API on $PORT (REST + ws://…/ws) — firehose auto-on
+
+# To run the test suite, start the server with the firehose OFF (deterministic
+# counts), then run Bruno against it from another terminal:
+bun run dev:test                     # same server, SIM_ENABLED=false
+cd bruno && bru run --env local --disable-cookies   # the API test suite (server must be up)
+
 bun run scripts/ws-smoke.ts          # realtime check (server must be running)
 bun run scripts/sim-smoke.ts         # firehose streaming proof (server must be running)
 ```
@@ -75,8 +80,8 @@ like-comment/follow).
 
 `scripts/sim-smoke.ts` automates exactly this proof (anonymous socket → start sim → assert a
 `post.created` arrives → stop). When running the Bruno suite, start the server with
-`SIM_ENABLED=false` so the firehose doesn't perturb the read/count assertions in other
-folders — the `10-sim/` folder drives start/stop explicitly.
+`bun run dev:test` (which sets `SIM_ENABLED=false`) so the firehose doesn't perturb the
+read/count assertions in other folders — the `10-sim/` folder drives start/stop explicitly.
 
 ## Working on it
 

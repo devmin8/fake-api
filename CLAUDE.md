@@ -27,7 +27,8 @@ Never skip ahead to the next ticket. One ticket in, one log line out, then pause
 - **Each commit is working and incremental.** No commits that just add empty folders or
   `.gitkeep`. Don't split work so finely that a commit can't run.
 - **No unit tests.** Test the API with **Bruno** as you build — one folder per resource under
-  `bruno/`, following the testing plan. Run headless with
+  `bruno/`, following the testing plan. Start the server with `bun run dev:test` (the firehose
+  off, so bot writes can't perturb count assertions), then run headless with
   `cd bruno && bru run --env local --disable-cookies`.
 - **Services are the one write path.** Every state mutation lives in `src/services/`; routes
   are thin (validate → service → respond) and the firehose calls the same services. Simulated
@@ -46,7 +47,8 @@ Never skip ahead to the next ticket. One ticket in, one log line out, then pause
 ## Quick commands (once code exists)
 
 ```bash
-bun run dev                 # start the API
+bun run dev                 # start the API (firehose auto-on when SIM_ENABLED=true)
+bun run dev:test            # start the API with the firehose off — use this for Bruno runs
 bun run db:migrate          # apply migrations
 bun run db:seed             # seed users/bots/posts/comments/tags
 cd bruno && bru run --env local --disable-cookies   # run the whole Bruno suite in order
