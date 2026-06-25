@@ -141,3 +141,7 @@ It's safe to leave streaming overnight; just reseed if you run it for days.
 Built ticket-by-ticket; the build is feature-complete per the system design.
 Workflow, backlog, and conventions: [`.docs/workflow.html`](.docs/workflow.html) ·
 [`.docs/tasks/`](.docs/tasks/) · [`CLAUDE.md`](CLAUDE.md) (agent instructions).
+
+## License
+
+MIT License
