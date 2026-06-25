@@ -1,95 +1,121 @@
 # fake-api
 
-A self-hosted, fully relational, real-time **mock backend** — a permanent practice ground for
+A self-hosted, fully relational, **real-time mock backend** — a permanent practice ground for
 building any frontend against real auth, real data, and a live event stream. Unlike
-JSONPlaceholder & friends, it accepts writes, enforces auth, models relationships, and
-streams a live feed over WebSockets.
+JSONPlaceholder & friends, it **accepts writes, enforces auth, models relationships, and
+streams a live feed over WebSockets** — and ships a **firehose simulator** so the feed is alive
+the moment you open it, with no second client.
 
-## Stack
+**Stack:** Bun · Elysia · Drizzle · bun:sqlite · native WebSockets · cookie-JWT auth (refresh
+rotation + CSRF double-submit). Full spec: [`.docs/system-design.html`](.docs/system-design.html).
 
-**Bun** · **Elysia** · **Drizzle** · **bun:sqlite** · native **WebSockets** · cookie-JWT auth
-(+ refresh rotation, CSRF double-submit). Full spec: [`.docs/system-design.html`](.docs/system-design.html).
-
-## What it does
-
-- Social/Q&A feed domain — users, posts (with images), threaded comments, likes, tags,
-  follows, bookmarks, notifications.
-- Public/authenticated route split (browse signed-out; write signed-in).
-- Cursor-paginated, filterable, sortable reads over genuinely relational data.
-- WebSocket topics for live counts, new posts, comments, and per-user notifications.
-- A toggleable **firehose simulator** — bot users that post/comment/like on a timer, so the
-  feed visibly streams with no second client.
-
-## Status
-
-Built ticket-by-ticket. The current task is whatever
-[`.docs/tasks/status.html`](.docs/tasks/status.html) points to under **Next**.
-
-## Quick start (once code exists)
+## Quick start
 
 ```bash
 bun install
-bun run db:migrate && bun run db:seed
-bun run dev                          # API on $PORT (REST + ws://…/ws) — firehose auto-on
-
-# To run the test suite, start the server with the firehose OFF (deterministic
-# counts), then run Bruno against it from another terminal:
-bun run dev:test                     # same server, SIM_ENABLED=false
-cd bruno && bru run --env local --disable-cookies   # the API test suite (server must be up)
-
-bun run scripts/ws-smoke.ts          # realtime check (server must be running)
-bun run scripts/sim-smoke.ts         # firehose streaming proof (server must be running)
+bun run db:migrate && bun run db:seed     # create + seed ./data/app.db (users, bots, posts…)
+bun run dev                               # REST + ws://…/ws on $PORT · firehose auto-on · Swagger at /docs
 ```
 
-Swagger lives at `/docs`. The realtime endpoint is `ws://<host>/ws`: subscribe with
-`{ "action": "subscribe", "topic": "feed:global" }` and the server pushes
-`{ topic, event, data, ts }` envelopes. Public topics (`feed:global`, `tag:{slug}`,
-`post:{id}`) are open; `user:{id}` requires the access-token cookie at upgrade and only
-the owner may subscribe.
+Or with Docker (`SEED_ON_START=true` seeds demo data + bots on first boot):
+
+```bash
+docker run -p 3000:3000 -e SEED_ON_START=true -v fake-api-data:/data ghcr.io/devmin8/fake-api:latest
+```
+
+## API at a glance
+
+Reads are public; writes need a session (🔒). Browse signed-out, write signed-in.
+**Interactive docs + every schema live at [`/docs`](http://localhost:3000/docs).**
+
+| Area | Endpoints |
+|---|---|
+| **Auth** | `POST /api/auth/register · login · refresh · logout` · 🔒 `GET /api/auth/me` |
+| **Posts** | `GET /api/posts` *(sort=`new`\|`top`\|`trending`, `cursor`, `tag`, `author`)* · `GET /api/posts/:id` · `GET /api/posts/updates?since=` · 🔒 `POST /api/posts` · 🔒 `PATCH·DELETE /api/posts/:id` |
+| **Comments** | `GET /api/posts/:id/comments` · `GET /api/comments/:id/replies` · 🔒 `POST /api/posts/:id/comments` · 🔒 `DELETE /api/comments/:id` |
+| **Likes** | 🔒 `POST·DELETE /api/posts/:id/like` · 🔒 `POST·DELETE /api/comments/:id/like` |
+| **Users & social** | `GET /api/users/:username` *(+ `/posts` `/followers` `/following`)* · 🔒 `PATCH /api/users/me` · 🔒 `POST·DELETE /api/users/:username/follow` |
+| **Tags** | `GET /api/tags` · `GET /api/tags/:slug/posts` |
+| **Feed & bookmarks** | 🔒 `GET /api/feed` *(posts from people you follow)* · 🔒 `GET /api/bookmarks` · 🔒 `POST·DELETE /api/posts/:id/bookmark` |
+| **Notifications** | 🔒 `GET /api/notifications` · 🔒 `POST /api/notifications/read-all` · 🔒 `POST /api/notifications/:id/read` |
+| **Media** | 🔒 `POST /api/media` *(multipart)* · `GET /api/media/:file` |
+| **Realtime** | `WS /ws` — subscribe to topics, receive `{ topic, event, data, ts }` |
+| **Simulator** | `GET /api/sim/status` · `POST /api/sim/start · /stop` · `PATCH /api/sim/config` |
+
+**Reads are cursor-paginated, not offset** — every list returns `{ data, nextCursor, … }`. Pass
+`cursor` + `dir=older` to scroll back; `dir=newer` (or `GET /api/posts/updates?since=`) fetches
+only what arrived since your head cursor. Head inserts never shift a page you're paging through.
+
+## Realtime
+
+The endpoint is `ws://<host>/ws`. Subscribe, then the server pushes `{ topic, event, data, ts }`:
+
+```jsonc
+// client → server
+{ "action": "subscribe", "topic": "feed:global" }
+// server → client
+{ "topic": "feed:global", "event": "post.created", "data": { /* the post */ }, "ts": "…" }
+```
+
+| Topic | Carries | Access |
+|---|---|---|
+| `feed:global` | `post.created` | public |
+| `tag:{slug}` | `post.created` for that tag | public |
+| `post:{id}` | `post.liked/unliked/viewed`, `comment.created/liked` | public |
+| `user:{id}` | your notifications | 🔒 owner only (access-token cookie at upgrade) |
 
 ## Firehose simulator
 
-Bot users (`is_bot`) that post / comment / like / follow on a timer, driving the **same**
-`src/services/` write path real requests use — so the feed streams with **zero** authenticated
-clients and simulated data is indistinguishable from real data (same rows, same WS events).
+Bot users (`is_bot`) that post / comment / like / follow on a timer, driving the **same
+`src/services/` write path real requests use** — so the feed streams with **zero authenticated
+clients** and simulated data is byte-identical to real data (same rows, same WS events).
 
-It auto-starts when `SIM_ENABLED=true` (the default). A control surface under `/api/sim`
-(gated by `SIM_CONTROL_ENABLED`) toggles and tunes it live:
+Auto-starts when `SIM_ENABLED=true` (default). Toggle and tune it live via `/api/sim`
+(gated by `SIM_CONTROL_ENABLED`):
 
 ```bash
 curl localhost:3000/api/sim/status                       # running state + config
-curl -X POST localhost:3000/api/sim/start                # start (idempotent)
-curl -X POST localhost:3000/api/sim/stop                 # stop  (idempotent)
+curl -X POST localhost:3000/api/sim/start                # start  (idempotent)
+curl -X POST localhost:3000/api/sim/stop                 # stop   (idempotent)
 curl -X PATCH localhost:3000/api/sim/config \            # tune cadence / weights live
   -H 'content-type: application/json' \
-  -d '{"intervalMs":1000,"actionsPerTick":3,"weights":{"createPost":50}}'
+  -d '{"intervalMs":2000,"actionsPerTick":3,"weights":{"createPost":50}}'
 ```
 
-Tuning knobs (env or `PATCH /api/sim/config`): `SIM_INTERVAL_MS` (tick cadence),
-`SIM_ACTIONS_PER_TICK`, and the action weights (create post · comment · like post ·
-like-comment/follow).
+Knobs (env or `PATCH /api/sim/config`): `SIM_INTERVAL_MS` (default **10000**),
+`SIM_ACTIONS_PER_TICK` (default 1), and the action weights — create post 20% · comment 35% ·
+like post 30% · like-comment/follow 15%.
 
-**See the whole thesis in 30 seconds:**
+**See the whole thesis in 30 seconds:** open a WebSocket to `ws://localhost:3000/ws` (no login),
+send `{"action":"subscribe","topic":"feed:global"}`, and watch `post.created` / `comment.created`
+/ `post.liked` stream in while rows land in `data/app.db` — no authenticated client anywhere.
+`scripts/sim-smoke.ts` automates exactly this proof.
 
-1. `bun run db:seed && bun run dev` (the seed creates the bot users the sim acts as).
-2. Open `/docs` and, in a separate tab, open a WebSocket to `ws://localhost:3000/ws` (any WS
-   client — no login needed) and send `{ "action": "subscribe", "topic": "feed:global" }`.
-3. `curl -X POST localhost:3000/api/sim/start` (or just leave `SIM_ENABLED=true`).
-4. Watch `post.created` / `comment.created` / `post.liked` envelopes stream onto the socket,
-   and the new rows land in `data/app.db` — with no authenticated client anywhere.
+### Leaving it running — and the one limitation
 
-`scripts/sim-smoke.ts` automates exactly this proof (anonymous socket → start sim → assert a
-`post.created` arrives → stop). When running the Bruno suite, start the server with
-`bun run dev:test` (which sets `SIM_ENABLED=false`) so the firehose doesn't perturb the
-read/count assertions in other folders — the `10-sim/` folder drives start/stop explicitly.
+There's **no auto-pruning**: the firehose only ever adds rows, by design. At the default 10s
+cadence that's **~360 actions/hour** ≈ **72 posts · 126 comments**, the rest likes/follows/
+notifications. So:
 
-## Working on it
+- **A 10-hour session is a non-issue** — under ~1k posts and a few-thousand rows total. SQLite
+  does *millions*; the `app.db` file grows a few MB and read latency is unchanged.
+- **Only an always-on box (days→weeks)** accumulates enough to matter (and `ORDER BY RANDOM()`
+  in the bot pickers slowly costs more). The fix is deliberately manual: **`bun run db:seed`**
+  wipes and reseeds back to a clean baseline. No background reaper — fewer moving parts.
 
-- **Workflow:** [`.docs/workflow.html`](.docs/workflow.html) — one ticket at a time, each
-  commit working and incremental.
-- **Tasks:** [`.docs/tasks/backlog/`](.docs/tasks/backlog/) (`done/` is history).
-- **Testing:** Bruno, one folder per resource under `bruno/`, per
-  [`.docs/tasks/bruno-testing-plan.html`](.docs/tasks/bruno-testing-plan.html). No unit tests.
-  WebSockets aren't Bruno-testable — `scripts/ws-smoke.ts` and `scripts/sim-smoke.ts` cover
-  the realtime and firehose paths instead.
-- For agents: see [`CLAUDE.md`](CLAUDE.md).
+It's safe to leave streaming overnight; just reseed if you run it for days.
+
+## Good to know
+
+- **Auth** is cookie-based (access + refresh + CSRF). CSRF is gated by `CSRF_ENABLED` (default
+  on) — flip it off while learning a frontend to skip the double-submit header dance.
+- **Testing:** start the server with `bun run dev:test` (firehose off → deterministic counts),
+  then `cd bruno && bru run --env local --disable-cookies`. WebSockets aren't Bruno-testable —
+  `scripts/ws-smoke.ts` and `scripts/sim-smoke.ts` cover the realtime + firehose paths.
+- **Data lives in `./data`** (`DB_PATH`, `UPLOAD_DIR`) — the Docker volume mount point.
+
+## Project notes
+
+Built ticket-by-ticket; the build is feature-complete per the system design.
+Workflow, backlog, and conventions: [`.docs/workflow.html`](.docs/workflow.html) ·
+[`.docs/tasks/`](.docs/tasks/) · [`CLAUDE.md`](CLAUDE.md) (agent instructions).

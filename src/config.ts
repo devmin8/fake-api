@@ -38,7 +38,7 @@ export const config = {
   csrfEnabled: bool("CSRF_ENABLED", true),
 
   simEnabled: bool("SIM_ENABLED", true),
-  simIntervalMs: int("SIM_INTERVAL_MS", 4000),
+  simIntervalMs: int("SIM_INTERVAL_MS", 10_000),
   simActionsPerTick: int("SIM_ACTIONS_PER_TICK", 1),
   simControlEnabled: bool("SIM_CONTROL_ENABLED", true),
 } as const;
