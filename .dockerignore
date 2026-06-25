@@ -1,0 +1,11 @@
+# Keep the build context small and the image clean.
+node_modules
+data
+.git
+.github
+bruno
+.docs
+scripts
+*.md
+.env
+.DS_Store
