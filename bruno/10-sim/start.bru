@@ -1,0 +1,21 @@
+meta {
+  name: Start
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{baseUrl}}/api/sim/start
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.running: eq true
+}
+
+docs {
+  Start is an idempotent toggle: it returns the resulting status with running
+  true, whether or not the firehose was already running.
+}

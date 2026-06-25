@@ -1,0 +1,21 @@
+meta {
+  name: Stop
+  type: http
+  seq: 70
+}
+
+post {
+  url: {{baseUrl}}/api/sim/stop
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.running: eq false
+}
+
+docs {
+  Stop is the idempotent counterpart to start: it returns status with running
+  false, leaving the database where it is.
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Status reflects running
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrl}}/api/sim/status
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.running: eq true
+}
+
+docs {
+  After Start, status must report running true — the toggle is observable from
+  the read endpoint, not just the start response.
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Status reflects stopped
+  type: http
+  seq: 80
+}
+
+get {
+  url: {{baseUrl}}/api/sim/status
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.running: eq false
+}
+
+docs {
+  After Stop, status reports running false — closing the toggle loop. Leaves the
+  suite with the firehose stopped so later runs start from a known state.
+}

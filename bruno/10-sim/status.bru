@@ -1,0 +1,28 @@
+meta {
+  name: Status shape
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/sim/status
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.running: isBoolean
+  res.body.intervalMs: isNumber
+  res.body.actionsPerTick: isNumber
+  res.body.weights.createPost: isNumber
+  res.body.weights.comment: isNumber
+  res.body.weights.likePost: isNumber
+  res.body.weights.likeCommentOrFollow: isNumber
+}
+
+docs {
+  Public control endpoint. Asserts the status envelope shape only — we make no
+  claim about the initial running value, since it depends on SIM_ENABLED. The
+  start/stop requests below prove the toggle.
+}

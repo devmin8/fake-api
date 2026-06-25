@@ -19,9 +19,11 @@ import { bookmarkRoutes } from "~/routes/bookmarks.ts";
 import { feedRoutes } from "~/routes/feed.ts";
 import { mediaRoutes } from "~/routes/media.ts";
 import { notificationRoutes } from "~/routes/notifications.ts";
+import { simRoutes } from "~/routes/sim.ts";
 import { tagRoutes } from "~/routes/tags.ts";
 import { userRoutes } from "~/routes/users.ts";
 import { wsRoutes } from "~/routes/ws.ts";
+import { firehose } from "~/sim/firehose.ts";
 
 // Bring the schema up to date before serving — a fresh checkout boots straight
 // into a fully-tabled ./data/app.db with no manual migrate step.
@@ -85,8 +87,14 @@ const app = new Elysia()
   .use(feedRoutes)
   .use(mediaRoutes)
   .use(notificationRoutes)
+  // Control surface only exists when SIM_CONTROL_ENABLED; off → /api/sim/* 404s.
+  .use(config.simControlEnabled ? simRoutes : new Elysia())
   .use(wsRoutes)
   .listen(config.port);
+
+// Auto-run the firehose when enabled, so a fresh `bun run dev` streams events
+// with no client action. The control routes can still start/stop it at runtime.
+if (config.simEnabled) firehose.start();
 
 console.log(
   `🚀 fake-api listening on http://${app.server?.hostname}:${app.server?.port}` +

@@ -1,0 +1,25 @@
+meta {
+  name: Config patch invalid
+  type: http
+  seq: 60
+}
+
+patch {
+  url: {{baseUrl}}/api/sim/config
+  body: json
+  auth: none
+}
+
+body:json {
+  { "intervalMs": 1 }
+}
+
+assert {
+  res.status: eq 422
+  res.body.error.code: eq VALIDATION_ERROR
+}
+
+docs {
+  Validation boundary: intervalMs below the 50ms floor is rejected with the
+  standard envelope, so a typo can't wedge the timer into a busy-loop.
+}

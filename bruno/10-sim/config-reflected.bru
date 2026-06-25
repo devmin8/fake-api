@@ -1,0 +1,23 @@
+meta {
+  name: Status reflects config
+  type: http
+  seq: 50
+}
+
+get {
+  url: {{baseUrl}}/api/sim/status
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.intervalMs: eq 2000
+  res.body.actionsPerTick: eq 2
+  res.body.weights.createPost: eq 40
+}
+
+docs {
+  The patched config is durable in the live firehose, not just echoed by the
+  patch response — status reports the new cadence and weight.
+}

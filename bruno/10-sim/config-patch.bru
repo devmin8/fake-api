@@ -1,0 +1,33 @@
+meta {
+  name: Config patch
+  type: http
+  seq: 40
+}
+
+patch {
+  url: {{baseUrl}}/api/sim/config
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "intervalMs": 2000,
+    "actionsPerTick": 2,
+    "weights": { "createPost": 40 }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.intervalMs: eq 2000
+  res.body.actionsPerTick: eq 2
+  res.body.weights.createPost: eq 40
+  res.body.weights.comment: eq 35
+}
+
+docs {
+  Patch cadence / actions-per-tick / a single weight live. The response echoes
+  the merged config: changed fields take, untouched weights (comment=35) keep
+  their defaults. Patching while running re-arms the timer in place.
+}
