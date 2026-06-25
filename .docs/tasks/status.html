@@ -19,11 +19,13 @@
   <section id="next">
     <div class="sec-head"><span class="sec-num">▶</span><h2>Next</h2></div>
     <p>
-      <span class="badge b-todo">DONE</span>
-      <strong>All milestones shipped.</strong> task-013 (Firehose) was the final ticket —
-      the backlog is empty.
+      <span class="badge b-todo">OPTIONAL</span>
+      <strong>All milestones shipped.</strong> One optional hardening ticket is parked in the
+      backlog: <a href="backlog/task-014-pin-action-shas.html"><code>task-014</code></a> — pin
+      the publish workflow's actions to commit SHAs + add Dependabot. Not required; pick up only
+      if tightening CI supply-chain risk.
     </p>
-    <p class="muted">Nothing queued. The build is feature-complete per the system design.</p>
+    <p class="muted">The build is feature-complete per the system design.</p>
   </section>
 
   <section id="log">
@@ -33,6 +35,7 @@
     <div class="tbl-wrap"><table>
       <thead><tr><th>Ticket</th><th>State</th><th>Ticket file</th></tr></thead>
       <tbody>
+        <tr><td>GHCR security pass</td><td>done</td><td>non-root image · provenance+SBOM · Trivy scan · spun out <a href="backlog/task-014-pin-action-shas.html"><code>task-014</code></a></td></tr>
         <tr><td>task-013 — Firehose</td><td>done</td><td><a href="done/task-013-firehose.html"><code>done/task-013-firehose.html</code></a></td></tr>
         <tr><td>task-012 — Media</td><td>done</td><td><a href="done/task-012-media.html"><code>done/task-012-media.html</code></a></td></tr>
         <tr><td>task-011 — Realtime / WebSocket</td><td>done <span class="badge b-todo">[notes]</span></td><td><a href="done/task-011-realtime.html"><code>done/task-011-realtime.html</code></a></td></tr>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>task-014 — Pin GitHub Actions to commit SHAs</title>
+<link rel="stylesheet" href="../assets/tasks.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow"><span class="dot"></span>Backlog ticket · task-014 · hardening · optional</div>
+    <h1>Pin GitHub Actions to commit SHAs</h1>
+    <p class="tagline">Supply-chain hardening for <code>.github/workflows/publish-image.yml</code>.
+    Today the workflow references third-party actions by mutable version tags
+    (<code>@v4</code>, <code>@v6</code>, …). Pin each to an immutable commit SHA so a
+    compromised or retagged action can't run with our <code>packages: write</code> token.</p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">①</span><h2>Why this is parked, not done</h2></div>
+    <ul>
+      <li>The publish workflow is <strong>manually triggered</strong> on a personal repo, so the
+      exposure window is small — this is genuine hardening, not a live hole.</li>
+      <li>A tag like <code>@v6</code> is a <em>mutable</em> pointer: whoever controls the action
+      repo can move it to new code, which would then run inside our CI job with the
+      <code>GITHUB_TOKEN</code>. A full commit SHA is immutable and can't change under us.
+      (This is the class of attack behind the <code>tj-actions/changed-files</code> incident.)</li>
+      <li>The cost: pinned SHAs <strong>don't auto-update</strong>, so they must be kept fresh —
+      otherwise we drift onto stale, unpatched actions. So this ticket pairs the pins with
+      Dependabot, which is the part that makes pinning sustainable.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">②</span><h2>Scope</h2></div>
+    <ul>
+      <li>Rewrite each <code>uses:</code> in <code>publish-image.yml</code> to
+      <code>owner/action@&lt;40-char-sha&gt;&nbsp;# vX</code> — SHA for immutability, the trailing
+      <code># vX</code> comment for human readability and so Dependabot can bump both together.</li>
+      <li>Add <code>.github/dependabot.yml</code> with the <code>github-actions</code> ecosystem
+      (e.g. weekly) so the pinned SHAs get PR'd forward automatically.</li>
+      <li>Re-run the workflow once to confirm nothing broke after pinning.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">③</span><h2>Reference — SHAs resolved 2026-06-24</h2></div>
+    <p class="muted">Re-resolve before applying; tags may have moved. Each is the commit the
+    tag pointed at on this date.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Action</th><th>Tag</th><th>Commit SHA</th></tr></thead>
+      <tbody>
+        <tr><td><code>actions/checkout</code></td><td>v4</td><td><code>34e114876b0b11c390a56381ad16ebd13914f8d5</code></td></tr>
+        <tr><td><code>docker/setup-buildx-action</code></td><td>v3</td><td><code>8d2750c68a42422c14e847fe6c8ac0403b4cbd6f</code></td></tr>
+        <tr><td><code>docker/login-action</code></td><td>v3</td><td><code>c94ce9fb468520275223c153574b00df6fe4bcc9</code></td></tr>
+        <tr><td><code>docker/metadata-action</code></td><td>v5</td><td><code>c299e40c65443455700f0fdfc63efafe5b349051</code></td></tr>
+        <tr><td><code>docker/build-push-action</code></td><td>v6</td><td><code>10e90e3645eae34f1e60eeb005ba3a3d33f178e8</code></td></tr>
+        <tr><td><code>aquasecurity/trivy-action</code></td><td>v0.33.0</td><td><code>f9424c10c36e288d5fa79bd3dfd1aeb2d6eae808</code></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">④</span><h2>Acceptance</h2></div>
+    <ul class="check">
+      <li>Every <code>uses:</code> in <code>publish-image.yml</code> is a 40-char SHA with a
+      <code># vX</code> comment.</li>
+      <li><code>.github/dependabot.yml</code> tracks the <code>github-actions</code> ecosystem.</li>
+      <li>A manual <em>Run workflow</em> still builds, pushes, attests, and scans green.</li>
+    </ul>
+  </section>
+
+  <footer>fake-api · task-014 · supply-chain hardening · split out of the GHCR security pass</footer>
+</div>
+</body>
+</html>

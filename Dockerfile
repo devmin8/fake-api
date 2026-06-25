@@ -20,6 +20,13 @@ ENV NODE_ENV=production \
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Run as the unprivileged `bun` user that ships with the image instead of root,
+# so a compromised process isn't root inside the container. /data is the writable
+# volume (SQLite + uploads), so it must be owned by `bun` before we drop privileges;
+# a fresh volume inherits this ownership from the image.
+RUN mkdir -p /data/uploads && chown -R bun:bun /data
+USER bun
+
 # Persist the SQLite db + uploaded media across container restarts.
 VOLUME ["/data"]
 EXPOSE 3000
