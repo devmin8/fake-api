@@ -63,19 +63,19 @@ jobs:
           provenance: true
           sbom: true
 
-      # GHCR requires a lowercase image path; github.repository may contain caps.
-      - name: Derive lowercase image ref
-        id: img
-        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-
-      # Scan the image we just pushed (pinned by digest) and fail on fixable
+      # Scan the freshly-pushed image (pinned by digest) and fail on fixable
       # CRITICAL/HIGH CVEs, so a known-vulnerable image doesn't go unnoticed.
+      # We run Trivy via its official container rather than aquasecurity/trivy-action,
+      # whose binary-download step is flaky on CI runners. Auth to GHCR is reused
+      # from the docker login above via the mounted ~/.docker/config.json.
+      # GITHUB_REPOSITORY is lowercased (${,,}) because GHCR paths must be lowercase.
       - name: Scan image for vulnerabilities
-        uses: aquasecurity/trivy-action@v0.33.0
-        with:
-          image-ref: ${{ steps.img.outputs.ref }}@${{ steps.build.outputs.digest }}
-          format: table
-          exit-code: "1"
-          ignore-unfixed: true
-          severity: CRITICAL,HIGH
-          vuln-type: os,library
+        run: |
+          docker run --rm \
+            -v "${HOME}/.docker/config.json:/root/.docker/config.json:ro" \
+            aquasec/trivy:latest image \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --scanners vuln \
+            --exit-code 1 \
+            "ghcr.io/${GITHUB_REPOSITORY,,}@${{ steps.build.outputs.digest }}"

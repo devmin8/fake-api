@@ -6,9 +6,11 @@
 FROM oven/bun:1 AS deps
 WORKDIR /app
 # Install with the lockfile only first, so this layer caches across source edits.
-# All deps (incl. @faker-js/faker) — the seed needs faker at runtime.
+# Production deps only: this drops drizzle-kit (a dev-time codegen tool that bundles
+# a vulnerable Go `esbuild` binary the runtime never uses). Migrations run via
+# drizzle-orm and the seed uses faker — both are runtime `dependencies`.
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --production
 
 FROM oven/bun:1 AS release
 WORKDIR /app
@@ -16,6 +18,13 @@ ENV NODE_ENV=production \
     PORT=3000 \
     DB_PATH=/data/app.db \
     UPLOAD_DIR=/data/uploads
+
+# Pull the latest Debian security patches for base-image OS packages (openssl,
+# libcap, …) so the image isn't shipping known-fixed CVEs. Runs as root before
+# we drop to the `bun` user below.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
