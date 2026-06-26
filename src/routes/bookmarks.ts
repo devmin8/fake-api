@@ -5,14 +5,11 @@
 
 import { Elysia, t } from "elysia";
 
+import { clampLimit } from "~/lib/pagination.ts";
+
 import { listBookmarks } from "~/services/bookmarks.ts";
 
 import { authGuard } from "~/plugins/auth-guard.ts";
-
-const clampLimit = (v?: number): number => {
-  if (v === undefined || Number.isNaN(v)) return 20;
-  return Math.max(1, Math.min(100, Math.floor(v)));
-};
 
 export const bookmarkRoutes = new Elysia({ prefix: "/api/bookmarks" })
   .use(authGuard)

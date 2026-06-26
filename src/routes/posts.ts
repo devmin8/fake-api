@@ -5,6 +5,8 @@
 
 import { Elysia, t } from "elysia";
 
+import { listParams } from "~/lib/pagination.ts";
+
 import {
   createPost,
   deletePost,
@@ -17,12 +19,6 @@ import { like, unlike } from "~/services/likes.ts";
 import { addBookmark, removeBookmark } from "~/services/bookmarks.ts";
 
 import { authGuard } from "~/plugins/auth-guard.ts";
-
-// default 20, max 100, min 1 — non-numeric/absent falls back to the default.
-const clampLimit = (v?: number): number => {
-  if (v === undefined || Number.isNaN(v)) return 20;
-  return Math.max(1, Math.min(100, Math.floor(v)));
-};
 
 const listQuery = t.Object({
   sort: t.Optional(
@@ -66,9 +62,7 @@ export const postRoutes = new Elysia({ prefix: "/api/posts" })
         sort: query.sort ?? "new",
         tag: query.tag,
         author: query.author,
-        cursor: query.cursor,
-        dir: query.dir ?? "older",
-        limit: clampLimit(query.limit),
+        ...listParams(query),
       }),
     { query: listQuery, detail: { summary: "List posts", tags: ["posts"] } },
   )

@@ -3,6 +3,8 @@
 
 import { Elysia, t } from "elysia";
 
+import { listParams } from "~/lib/pagination.ts";
+
 import {
   listNotifications,
   markAllNotificationsRead,
@@ -10,11 +12,6 @@ import {
 } from "~/services/notifications.ts";
 
 import { authGuard } from "~/plugins/auth-guard.ts";
-
-const clampLimit = (v?: number): number => {
-  if (v === undefined || Number.isNaN(v)) return 20;
-  return Math.max(1, Math.min(100, Math.floor(v)));
-};
 
 export const notificationRoutes = new Elysia({ prefix: "/api/notifications" })
   .use(authGuard)
@@ -26,9 +23,7 @@ export const notificationRoutes = new Elysia({ prefix: "/api/notifications" })
     ({ user, query }) =>
       listNotifications(user!.id, {
         unread: query.unread === "true",
-        cursor: query.cursor,
-        dir: query.dir ?? "older",
-        limit: clampLimit(query.limit),
+        ...listParams(query),
       }),
     {
       auth: true,

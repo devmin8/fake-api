@@ -5,6 +5,8 @@
 
 import { Elysia, t } from "elysia";
 
+import { listHandler, listQuery } from "~/lib/pagination.ts";
+
 import {
   createComment,
   deleteComment,
@@ -15,41 +17,15 @@ import { like, unlike } from "~/services/likes.ts";
 
 import { authGuard } from "~/plugins/auth-guard.ts";
 
-const clampLimit = (v?: number): number => {
-  if (v === undefined || Number.isNaN(v)) return 20;
-  return Math.max(1, Math.min(100, Math.floor(v)));
-};
-
-const listQuery = t.Object({
-  cursor: t.Optional(t.String()),
-  dir: t.Optional(t.Union([t.Literal("older"), t.Literal("newer")])),
-  limit: t.Optional(t.Numeric()),
-});
-
 const createCommentBody = t.Object({
   body: t.String({ minLength: 1, maxLength: 10000 }),
   parentId: t.Optional(t.String()),
 });
 
-const listHandler =
-  (fn: (id: string, params: { cursor?: string; dir: "older" | "newer"; limit: number }) => unknown) =>
-  ({
-    params,
-    query,
-  }: {
-    params: { id: string };
-    query: { cursor?: string; dir?: "older" | "newer"; limit?: number };
-  }) =>
-    fn(params.id, {
-      cursor: query.cursor,
-      dir: query.dir ?? "older",
-      limit: clampLimit(query.limit),
-    });
-
 // Mount on postRoutes (inherits /api/posts prefix): GET + POST /:id/comments.
 export const postCommentRoutes = new Elysia()
   .use(authGuard)
-  .get("/:id/comments", listHandler(listPostComments), {
+  .get("/:id/comments", listHandler("id", listPostComments), {
     query: listQuery,
     detail: { summary: "List top-level comments on a post", tags: ["comments"] },
   })
@@ -70,7 +46,7 @@ export const postCommentRoutes = new Elysia()
 
 export const commentRoutes = new Elysia({ prefix: "/api/comments" })
   .use(authGuard)
-  .get("/:id/replies", listHandler(listCommentReplies), {
+  .get("/:id/replies", listHandler("id", listCommentReplies), {
     query: listQuery,
     detail: { summary: "List replies under a comment", tags: ["comments"] },
   })

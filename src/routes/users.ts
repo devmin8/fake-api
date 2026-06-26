@@ -3,6 +3,8 @@
 
 import { Elysia, t } from "elysia";
 
+import { listHandler, listQuery } from "~/lib/pagination.ts";
+
 import { follow, unfollow } from "~/services/follows.ts";
 import {
   getUserProfile,
@@ -14,43 +16,12 @@ import {
 
 import { authGuard } from "~/plugins/auth-guard.ts";
 
-const clampLimit = (v?: number): number => {
-  if (v === undefined || Number.isNaN(v)) return 20;
-  return Math.max(1, Math.min(100, Math.floor(v)));
-};
-
-const listQuery = t.Object({
-  cursor: t.Optional(t.String()),
-  dir: t.Optional(t.Union([t.Literal("older"), t.Literal("newer")])),
-  limit: t.Optional(t.Numeric()),
-});
-
 // Self-edit body — every field optional; bio/avatarUrl accept null to clear.
 const updateMeBody = t.Object({
   displayName: t.Optional(t.String({ minLength: 1, maxLength: 80 })),
   bio: t.Optional(t.Union([t.String({ maxLength: 500 }), t.Null()])),
   avatarUrl: t.Optional(t.Union([t.String({ maxLength: 2000 }), t.Null()])),
 });
-
-const listHandler =
-  (
-    fn: (
-      username: string,
-      params: { cursor?: string; dir: "older" | "newer"; limit: number },
-    ) => unknown,
-  ) =>
-  ({
-    params,
-    query,
-  }: {
-    params: { username: string };
-    query: { cursor?: string; dir?: "older" | "newer"; limit?: number };
-  }) =>
-    fn(params.username, {
-      cursor: query.cursor,
-      dir: query.dir ?? "older",
-      limit: clampLimit(query.limit),
-    });
 
 export const userRoutes = new Elysia({ prefix: "/api/users" })
   .use(authGuard)
@@ -82,19 +53,19 @@ export const userRoutes = new Elysia({ prefix: "/api/users" })
   )
 
   // PUBLIC — paginated posts by this user.
-  .get("/:username/posts", listHandler(listUserPosts), {
+  .get("/:username/posts", listHandler("username", listUserPosts), {
     query: listQuery,
     detail: { summary: "User posts", tags: ["users"] },
   })
 
   // PUBLIC — paginated followers.
-  .get("/:username/followers", listHandler(listUserFollowers), {
+  .get("/:username/followers", listHandler("username", listUserFollowers), {
     query: listQuery,
     detail: { summary: "User followers", tags: ["users"] },
   })
 
   // PUBLIC — paginated following.
-  .get("/:username/following", listHandler(listUserFollowing), {
+  .get("/:username/following", listHandler("username", listUserFollowing), {
     query: listQuery,
     detail: { summary: "User following", tags: ["users"] },
   });
