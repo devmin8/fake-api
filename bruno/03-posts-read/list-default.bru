@@ -28,9 +28,12 @@ script:post-response {
   bru.setEnvVar('postId', (withComments ?? res.body.data[0]).id);
   // Stash this page's ids so the older-backfill request can prove no overlap.
   bru.setEnvVar('page1Ids', JSON.stringify(res.body.data.map(p => p.id)));
-  // Real filter values pulled from live data, never hardcoded.
+  // Real filter values pulled from live data, never hardcoded. Pick a post that
+  // actually has a tag rather than assuming the newest one does — the API makes
+  // no such guarantee, and a tag-less post at the head would break the filter.
   bru.setEnvVar('filterAuthor', res.body.data[0].author.username);
-  bru.setEnvVar('filterTag', res.body.data[0].tags[0].slug);
+  const tagged = res.body.data.find(p => p.tags.length > 0) ?? res.body.data[0];
+  bru.setEnvVar('filterTag', tagged.tags[0]?.slug ?? '');
 }
 
 tests {

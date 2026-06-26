@@ -1,0 +1,33 @@
+meta {
+  name: Cleanup like post
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/api/posts/{{likePostId}}
+  body: none
+  auth: none
+}
+
+docs {
+  Self-cleaning teardown. 07-likes-bookmarks creates this post (owned by alice,
+  the ambient session) and never deletes it, so it would otherwise survive into
+  the next run as a tag-less newest post and break 03-posts-read. Runs before
+  logout (seq 10) while alice's session is still live. Best-effort: 200 if we
+  deleted it, 404 if it was already gone — either leaves the DB clean.
+}
+
+assert {
+  res.body: isDefined
+}
+
+tests {
+  test("post removed or already absent", function () {
+    expect([200, 404]).to.include(res.status);
+  });
+}
+
+script:post-response {
+  bru.setEnvVar('likePostId', null);
+}

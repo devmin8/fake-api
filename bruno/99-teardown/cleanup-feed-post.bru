@@ -1,0 +1,44 @@
+meta {
+  name: Cleanup feed post
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/api/posts/{{feedPostId}}
+  body: none
+  auth: none
+}
+
+docs {
+  Self-cleaning teardown. 08-follows-feed-notifications creates this post as the
+  SECOND user (bob), so the ambient alice session would 403 on it. Swap to bob's
+  session for this request only — same pattern as 06/delete-not-owner — so the
+  owner can delete it. Best-effort: 200 deleted, 404 already gone.
+}
+
+script:pre-request {
+  // Override the collection's alice cookies with bob's session so the owner
+  // (not alice) issues the delete.
+  const access = bru.getEnvVar('secondAccessToken');
+  const csrf   = bru.getEnvVar('secondCsrfToken');
+  const parts = [];
+  if (access) parts.push(`access_token=${access}`);
+  if (csrf)   parts.push(`csrf_token=${csrf}`);
+  req.setHeader('Cookie', parts.join('; '));
+  if (csrf) req.setHeader('X-CSRF-Token', csrf);
+}
+
+assert {
+  res.body: isDefined
+}
+
+tests {
+  test("post removed or already absent", function () {
+    expect([200, 404]).to.include(res.status);
+  });
+}
+
+script:post-response {
+  bru.setEnvVar('feedPostId', null);
+}

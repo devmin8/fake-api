@@ -1,0 +1,31 @@
+meta {
+  name: Cleanup notif post
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/api/posts/{{notifPostId}}
+  body: none
+  auth: none
+}
+
+docs {
+  Self-cleaning teardown. 08-follows-feed-notifications creates this post
+  (owned by alice, the ambient session) and never deletes it. Same rationale as
+  cleanup-like-post: drop it before logout so it can't leak into the next run.
+}
+
+assert {
+  res.body: isDefined
+}
+
+tests {
+  test("post removed or already absent", function () {
+    expect([200, 404]).to.include(res.status);
+  });
+}
+
+script:post-response {
+  bru.setEnvVar('notifPostId', null);
+}

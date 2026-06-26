@@ -9,7 +9,8 @@
     "start": "bun run src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
-    "db:seed": "bun run src/db/seed.ts"
+    "db:seed": "bun run src/db/seed.ts",
+    "test:e2e": "bash scripts/test-e2e.sh"
   },
   "dependencies": {
     "@elysiajs/jwt": "^1.4.2",

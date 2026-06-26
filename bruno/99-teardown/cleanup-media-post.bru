@@ -1,0 +1,31 @@
+meta {
+  name: Cleanup media post
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/api/posts/{{mediaPostId}}
+  body: none
+  auth: none
+}
+
+docs {
+  Self-cleaning teardown. 09-media creates this post (owned by alice, the ambient
+  session) and never deletes it. Same rationale as the other cleanup-* requests:
+  drop it before logout so the suite returns the DB to its seeded state.
+}
+
+assert {
+  res.body: isDefined
+}
+
+tests {
+  test("post removed or already absent", function () {
+    expect([200, 404]).to.include(res.status);
+  });
+}
+
+script:post-response {
+  bru.setEnvVar('mediaPostId', null);
+}
